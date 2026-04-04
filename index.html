@@ -325,7 +325,26 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
           <button id="atmBtn" class="btn-pri" onclick="addAtm()">+ ATM 인출 등록</button>
         </div>
       </div>
-      <div class="card"><div class="card-ttl">충전 / 환전 / ATM 내역</div><div id="chargeList"><div style="text-align:center;padding:1.5rem;color:var(--tx3);font-size:13px">없습니다</div></div></div>
+        <!-- 카드 환불 (카드→계좌) -->
+        <div class="card">
+          <div class="card-ttl">↩ 카드→계좌 이전 (잔액 환전)</div>
+          <div style="background:#FFF4E5;border-radius:var(--rmd);padding:10px 12px;font-size:12px;color:#7A4100;margin-bottom:12px;border:.5px solid #F5C97A">
+            트레블월렛 카드 잔액 일부 또는 전부를 원화로 환전해 계좌로 이전합니다.<br>카드 잔액이 줄고, 환전 환율로 계산된 원화가 계좌에 반환됩니다.
+          </div>
+          <div class="fr3">
+            <div class="fg"><label id="rfLocalLbl">환불 현지화 금액</label><input type="text" id="rfLocal" placeholder="0" inputmode="numeric" oninput="fmtInput(this);calcRefund('local')"/></div>
+            <div class="fg"><label id="rfRateLbl">환율</label><input type="text" id="rfRate" placeholder="930.00" inputmode="decimal" oninput="calcRefund('rate')"/></div>
+            <div class="fg"><label>환산 원화(자동)</label><input type="text" id="rfKrw" placeholder="자동계산" readonly style="background:var(--bg3)"/></div>
+          </div>
+          <div class="fr2">
+            <div class="fg"><label>날짜</label><input type="date" id="rfDate"/></div>
+            <div class="fg"><label>메모</label><input type="text" id="rfNote" placeholder="예: 골프장 취소 환불" autocomplete="off"/></div>
+          </div>
+          <div id="rfWarn" class="warn warn-r"></div>
+          <button id="rfBtn" class="btn-pri" onclick="addRefund()" style="background:#BA7517">+ 카드 환불 등록</button>
+        </div>
+      </div>
+      <div class="card"><div class="card-ttl">충전 / 환전 / ATM / 계좌이전 내역</div><div id="chargeList"><div style="text-align:center;padding:1.5rem;color:var(--tx3);font-size:13px">없습니다</div></div></div>
     </div>
 
     <!-- 지출 -->
@@ -443,7 +462,7 @@ const MC=['#378ADD','#1D9E75','#BA7517','#7F77DD','#D85A30','#888780'];
 const MB=['#E6F1FB','#E1F5EE','#FAEEDA','#EEEDFE','#FAECE7','#F1EFE8'];
 
 let TRIP={name:'',startDate:'',endDate:'',note:'',country:null,members:[],payMethods:[],splitMode:'equal'};
-let deposits=[],charges=[],exchanges=[],atms=[],expenses=[],krwExps=[],nid=1,lineInst=null,step=0;
+let deposits=[],charges=[],exchanges=[],atms=[],refunds=[],expenses=[],krwExps=[],nid=1,lineInst=null,step=0;
 let MCM={},MBM={};
 
 /* ──────────────────────────────
@@ -470,11 +489,13 @@ const kDep=()=>deposits.filter(d=>d.cur==='KRW').reduce((s,d)=>s+d.amt,0);
 const lDep=()=>deposits.filter(d=>d.cur==='LOCAL').reduce((s,d)=>s+d.amt,0);
 const tChgKrw=()=>charges.reduce((s,c)=>s+c.krw,0)+exchanges.reduce((s,c)=>s+c.krw,0);
 const krwExpTotal=()=>krwExps.reduce((s,e)=>s+e.amt,0);
-const acct=()=>kDep()-tChgKrw()-krwExpTotal();
+const refundKrw=()=>refunds.reduce((s,r)=>s+r.krw,0);   // 환불 원화 → 계좌 반환 (+)
+const refundLocal=()=>refunds.reduce((s,r)=>s+r.local,0); // 환불 현지화 → 카드 차감 (-)
+const acct=()=>kDep()-tChgKrw()-krwExpTotal()+refundKrw(); // 계좌 = 입금 - 충전/환전 - 원화지출 + 환불원화
 const cardChgd=()=>charges.reduce((s,c)=>s+c.local,0);
 const cardSpent=()=>expenses.filter(e=>e.pay===TRIP.payMethods[0]).reduce((s,e)=>s+e.amt,0);
 const atmOut=()=>atms.reduce((s,a)=>s+a.local,0);
-const cardBal=()=>cardChgd()-cardSpent()-atmOut();
+const cardBal=()=>cardChgd()-cardSpent()-atmOut()-refundLocal(); // 카드 = 충전 - 지출 - ATM - 환불현지화
 const cashIn=()=>lDep()+exchanges.reduce((s,c)=>s+c.local,0)+atmOut();
 const cashSpent=()=>expenses.filter(e=>e.pay===(TRIP.payMethods[1]||'현금')).reduce((s,e)=>s+e.amt,0);
 const cashBal=()=>cashIn()-cashSpent();
@@ -579,7 +600,7 @@ function initApp(){
   document.getElementById('krwExpPayer').innerHTML='<option value="공통">공통(균등)</option>'+TRIP.members.map(m=>`<option value="${m}">${m}</option>`).join('');
 
   const today=new Date().toISOString().split('T')[0];
-  ['iDate','dDate','cDate','exDate','atmDate','krwExpDate'].forEach(id=>document.getElementById(id).value=today);
+  ['iDate','dDate','cDate','exDate','atmDate','krwExpDate','rfDate'].forEach(id=>document.getElementById(id).value=today);
 
   const sym=TRIP.country.sym,code=TRIP.country.code,r100=TRIP.country.r100;
   const rl=r100?`100${code}당 원화`:`1${code}당 원화`;
@@ -591,6 +612,8 @@ function initApp(){
   document.getElementById('exLocalLbl').textContent=`수령${code}(${sym})`;
   document.getElementById('exRateLbl').textContent=`환율(${rl})`;
   document.getElementById('atmLocalLbl').textContent=`인출${code}(${sym})`;
+  document.getElementById('rfLocalLbl').textContent=`환불${code}(${sym})`;
+  document.getElementById('rfRateLbl').textContent=`환율(${rl})`;
   document.getElementById('tw-lbl').textContent=`${TRIP.payMethods[0]||'카드'} 잔액`;
   document.getElementById('tot-lbl').textContent=`총 지출(${code})`;
   document.getElementById('iAmtLbl').textContent=`금액(${sym})`;
@@ -639,6 +662,7 @@ function saveCurrentTrip(silent=false){
     charges:JSON.parse(JSON.stringify(charges)),
     exchanges:JSON.parse(JSON.stringify(exchanges)),
     atms:JSON.parse(JSON.stringify(atms)),
+    refunds:JSON.parse(JSON.stringify(refunds)),
     expenses:JSON.parse(JSON.stringify(expenses)),
     krwExps:JSON.parse(JSON.stringify(krwExps)),
     nid,
@@ -668,6 +692,7 @@ function loadTrip(id){
   charges=JSON.parse(JSON.stringify(h.charges));
   exchanges=JSON.parse(JSON.stringify(h.exchanges));
   atms=JSON.parse(JSON.stringify(h.atms||[]));
+  refunds=JSON.parse(JSON.stringify(h.refunds||[]));
   expenses=JSON.parse(JSON.stringify(h.expenses));
   krwExps=JSON.parse(JSON.stringify(h.krwExps||[]));
   nid=h.nid||1;
@@ -776,7 +801,7 @@ function showNewTrip(){
   [0,1,2,3].forEach(i=>document.getElementById('step'+i).style.display=i===0?'':'none');
   [0,1,2,3].forEach(i=>document.getElementById('sd'+i).className='step-dot'+(i===0?' on':''));
   TRIP={name:'',startDate:'',endDate:'',note:'',country:null,members:[],payMethods:[],splitMode:'equal'};
-  deposits=[];charges=[];exchanges=[];atms=[];expenses=[];krwExps=[];nid=1;
+  deposits=[];charges=[];exchanges=[];atms=[];refunds=[];expenses=[];krwExps=[];nid=1;
   MCM={};MBM={};
   document.getElementById('s_tripName').value='';
   document.getElementById('s_tripNote').value='';
@@ -896,7 +921,48 @@ function saveAtm(id){
   closeModal();renderChargeList();renderHome();
 }
 
-/* ── 원화 직접 지출 ── */
+/* ── 카드→계좌 이전 ── */
+function calcRefund(ch){
+  const l=nv('rfLocal'),r=parseFloat(document.getElementById('rfRate').value)||0;
+  if(ch==='local'&&l>0&&r>0) sf('rfKrw',l2k(l,r));
+  else if(ch==='rate'&&r>0&&l>0) sf('rfKrw',l2k(l,r));
+  // 환불은 카드 잔액 초과 체크 불필요 (잔액을 늘려주는 방향)
+  const cardB=cardBal()-refundLocal(); // 환불 전 카드 잔액
+  sw('rfWarn', l>0&&l>(cardB+refundLocal())?`⚠ 환불 금액(${fL(l)})이 충전된 카드 잔액(${fL(cardChgd())})보다 큽니다. 금액을 확인해 주세요.`:'warn-r');
+  if(l===0||l<=(cardChgd())) sw('rfWarn',null);
+}
+function addRefund(){
+  const local=nv('rfLocal'),rate=parseFloat(document.getElementById('rfRate').value)||0,date=document.getElementById('rfDate').value,note=document.getElementById('rfNote').value.trim();
+  if(!local||!date){alert('이전 금액과 날짜를 입력해 주세요.');return;}
+  if(!rate){alert('환율을 입력해 주세요.\n이전 환율로 원화 계좌에 반환됩니다.');return;}
+  if(local>cardChgd()){
+    if(!confirm(`이전 금액 ${fL(local)}이 총 충전액 ${fL(cardChgd())}보다 큽니다.\n계속 등록하시겠습니까?`)) return;
+  }
+  const krw=l2k(local,rate);
+  refunds.push({id:nid++,local,rate,krw,date:mmdd(date),rawDate:date,note});
+  ['rfLocal','rfRate','rfNote'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('rfKrw').value='';
+  sw('rfWarn',null);
+  renderChargeList();renderHome();markDirty();
+}
+function editRefund(id){
+  const r=refunds.find(x=>x.id===id);if(!r)return;
+  openModal('카드→계좌 이전 수정',`<div class="edit-row"><div class="fr3" style="margin-bottom:10px"><div class="fg"><label>환불${TRIP.country.sym}</label><input type="text" id="e_rfLocal" value="${fmtN(r.local)}" inputmode="numeric" oninput="fmtInput(this);calcEditRefund()"/></div><div class="fg"><label>환율</label><input type="text" id="e_rfRate" value="${r.rate}" inputmode="decimal" oninput="calcEditRefund()"/></div><div class="fg"><label>원화환산(자동)</label><input type="text" id="e_rfKrw" value="${fmtN(r.krw)}" readonly style="background:var(--bg3)"/></div></div><div class="fr2"><div class="fg"><label>날짜</label><input type="date" id="e_rfDate" value="${r.rawDate}"/></div><div class="fg"><label>메모</label><input type="text" id="e_rfNote" value="${r.note||''}" autocomplete="off"/></div></div></div><div class="edit-actions"><button class="btn-cancel" onclick="closeModal()">취소</button><button class="btn-save" onclick="saveRefund(${id})">저장</button></div>`);
+}
+function calcEditRefund(){
+  const l=parseFloat(document.getElementById('e_rfLocal').value.replace(/,/g,''))||0;
+  const r=parseFloat(document.getElementById('e_rfRate').value)||0;
+  if(l>0&&r>0) document.getElementById('e_rfKrw').value=fmtN(l2k(l,r));
+}
+function saveRefund(id){
+  const r=refunds.find(x=>x.id===id);if(!r)return;
+  const local=parseFloat(document.getElementById('e_rfLocal').value.replace(/,/g,''))||0;
+  const rate=parseFloat(document.getElementById('e_rfRate').value)||0;
+  const date=document.getElementById('e_rfDate').value;
+  if(!local||!rate||!date){alert('이전 금액, 환율, 날짜를 모두 입력해 주세요.');return;}
+  r.local=local;r.rate=rate;r.krw=l2k(local,rate);r.date=mmdd(date);r.rawDate=date;r.note=document.getElementById('e_rfNote').value.trim();
+  closeModal();renderChargeList();renderHome();markDirty();
+}
 function checkKrwExpBal(){
   const amt=nv('krwExpAmt'),bal=acct();
   const prev=document.getElementById('krwExpPreview');
@@ -990,6 +1056,7 @@ function renderHome(){
   charges.forEach(c=>all.push({type:'chg',date:c.rawDate,obj:c}));
   exchanges.forEach(c=>all.push({type:'ex',date:c.rawDate,obj:c}));
   atms.forEach(a=>all.push({type:'atm',date:a.rawDate,obj:a}));
+  refunds.forEach(r=>all.push({type:'refund',date:r.rawDate,obj:r}));
   expenses.forEach(e=>all.push({type:'exp',date:e.rawDate,obj:e}));
   krwExps.forEach(e=>all.push({type:'krwexp',date:e.rawDate,obj:e}));
   all.sort((a,b)=>b.date.localeCompare(a.date));
@@ -1008,6 +1075,7 @@ function renderHome(){
       if(item.type==='chg'){return `<div class="feed-row"><div class="feed-icon" style="background:#E6F1FB">💳</div><div style="flex:1;min-width:0"><div style="font-size:13px"><span class="tw-b">${TRIP.payMethods[0]||'카드'} 충전</span></div><div style="font-size:11px;color:var(--tx3);margin-top:1px">${fK(o.krw)} → ${fL(o.local)} · 환율 ${o.rate.toFixed(2)}${o.note?' · '+o.note:''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:500">${fL(o.local)}</div><div style="font-size:10px;color:var(--tx3)">${fK(o.krw)} 차감</div></div></div>`;}
       if(item.type==='ex'){return `<div class="feed-row"><div class="feed-icon" style="background:#FAEEDA">🔄</div><div style="flex:1;min-width:0"><div style="font-size:13px"><span class="cash-b">현금 환전</span></div><div style="font-size:11px;color:var(--tx3);margin-top:1px">${fK(o.krw)} → ${fL(o.local)} · 환율 ${o.rate.toFixed(2)}${o.note?' · '+o.note:''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:500">${fL(o.local)}</div><div style="font-size:10px;color:var(--tx3)">${fK(o.krw)} 차감</div></div></div>`;}
       if(item.type==='atm'){return `<div class="feed-row"><div class="feed-icon" style="background:#EEEDFE">🏧</div><div style="flex:1;min-width:0"><div style="font-size:13px"><span class="atm-b">ATM 인출</span></div><div style="font-size:11px;color:var(--tx3);margin-top:1px">카드→현금 이동${o.note?' · '+o.note:''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:500">${fL(o.local)}</div></div></div>`;}
+      if(item.type==='refund'){return `<div class="feed-row"><div class="feed-icon" style="background:#FFF4E5">↩</div><div style="flex:1;min-width:0"><div style="font-size:13px"><span style="display:inline-flex;align-items:center;background:#FFF4E5;color:#7A4100;font-size:10px;font-weight:500;padding:2px 7px;border-radius:10px;border:.5px solid #F5C97A">↩ 카드→계좌 이전</span></div><div style="font-size:11px;color:var(--tx3);margin-top:1px">${fL(o.local)} → ${fK(o.krw)} · 환율 ${o.rate.toFixed(2)}${o.note?' · '+o.note:''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:500;color:#1D9E75">+${fL(o.local)}</div><div style="font-size:10px;color:var(--tx3)">+${fK(o.krw)} 계좌반환</div></div></div>`;}
       if(item.type==='exp'){const pb=o.pay===TRIP.payMethods[0]?`<span class="tw-b">카드</span>`:`<span class="cash-b">현금</span>`;const pr=o.payer!=='공통'?`<span class="chip" style="background:${MBM[o.payer]||'#eee'};color:${MCM[o.payer]||'#333'}">${o.payer}</span>`:'';return `<div class="feed-row"><div class="feed-icon" style="background:${CB[o.cat]}"><span style="font-size:13px">●</span></div><div style="flex:1;min-width:0"><div style="font-size:13px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">${o.name}<span class="chip" style="background:${CB[o.cat]};color:${CT[o.cat]}">${o.cat}</span>${pr}</div><div style="font-size:11px;color:var(--tx3);margin-top:1px;display:flex;align-items:center;gap:4px">${pb}${o.note?' · '+o.note:''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:500;color:#E24B4A">–${fL(o.amt)}</div><div style="font-size:10px;color:var(--tx3)">${fK(eKrw(o))}</div></div></div>`;}
       if(item.type==='krwexp'){const pr=o.payer!=='공통'?`<span class="chip" style="background:${MBM[o.payer]||'#eee'};color:${MCM[o.payer]||'#333'}">${o.payer}</span>`:'';return `<div class="feed-row"><div class="feed-icon" style="background:#E6F1FB"><span style="font-size:13px;color:#0C447C">₩</span></div><div style="flex:1;min-width:0"><div style="font-size:13px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">${o.name}<span class="chip" style="background:${CB[o.cat]};color:${CT[o.cat]}">${o.cat}</span><span class="krw-b">원화결제</span>${pr}</div><div style="font-size:11px;color:var(--tx3);margin-top:1px">계좌 직접 차감${o.note?' · '+o.note:''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:500;color:#E24B4A">–${fK(o.amt)}</div></div></div>`;}
       return '';
@@ -1029,12 +1097,18 @@ function renderDepList(){
 
 function renderChargeList(){
   const el=document.getElementById('chargeList');
-  const all=[...charges.map(c=>({...c,kind:'card'})),...exchanges.map(e=>({...e,kind:'cash'})),...atms.map(a=>({...a,kind:'atm',krw:0}))].sort((a,b)=>a.rawDate.localeCompare(b.rawDate));
+  const all=[
+    ...charges.map(c=>({...c,kind:'card'})),
+    ...exchanges.map(e=>({...e,kind:'cash'})),
+    ...atms.map(a=>({...a,kind:'atm',krw:0})),
+    ...refunds.map(r=>({...r,kind:'refund'})),
+  ].sort((a,b)=>a.rawDate.localeCompare(b.rawDate));
   if(!all.length){el.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--tx3);font-size:13px">없습니다</div>';return;}
   el.innerHTML=all.map(c=>{
-    if(c.kind==='card')return `<div class="row"><div style="flex:1"><div style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="tw-b">${TRIP.payMethods[0]||'카드'} 충전</span> ${fK(c.krw)} → ${fL(c.local)}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px">${fD(c.date)} · 환율 ${c.rate.toFixed(2)}${c.note?' · '+c.note:''}</div></div><div class="row-actions"><button class="btn-icon edit" onclick="editCharge(${c.id})">✎</button><button class="btn-icon del" onclick="delItem(charges,${c.id},()=>{renderChargeList();renderHome();checkChargeBlock()})">✕</button></div></div>`;
-    if(c.kind==='cash')return `<div class="row"><div style="flex:1"><div style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="cash-b">현금 환전</span> ${fK(c.krw)} → ${fL(c.local)}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px">${fD(c.date)} · 환율 ${c.rate.toFixed(2)}${c.note?' · '+c.note:''}</div></div><div class="row-actions"><button class="btn-icon edit" onclick="editExchange(${c.id})">✎</button><button class="btn-icon del" onclick="delItem(exchanges,${c.id},()=>{renderChargeList();renderHome();checkChargeBlock()})">✕</button></div></div>`;
-    if(c.kind==='atm')return `<div class="row"><div style="flex:1"><div style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px"><span class="atm-b">🏧 ATM 인출</span> 카드→현금 ${fL(c.local)}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px">${fD(c.date)}${c.note?' · '+c.note:''}</div></div><div class="row-actions"><button class="btn-icon edit" onclick="editAtm(${c.id})">✎</button><button class="btn-icon del" onclick="delItem(atms,${c.id},()=>{renderChargeList();renderHome()})">✕</button></div></div>`;
+    if(c.kind==='card')return `<div class="row"><div style="flex:1"><div style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="tw-b">${TRIP.payMethods[0]||'카드'} 충전</span> ${fK(c.krw)} → ${fL(c.local)}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px">${fD(c.date)} · 환율 ${c.rate.toFixed(2)}${c.note?' · '+c.note:''}</div></div><div class="row-actions"><button class="btn-icon edit" onclick="editCharge(${c.id})">✎</button><button class="btn-icon del" onclick="delItem(charges,${c.id},()=>{renderChargeList();renderHome();})">✕</button></div></div>`;
+    if(c.kind==='cash')return `<div class="row"><div style="flex:1"><div style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span class="cash-b">현금 환전</span> ${fK(c.krw)} → ${fL(c.local)}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px">${fD(c.date)} · 환율 ${c.rate.toFixed(2)}${c.note?' · '+c.note:''}</div></div><div class="row-actions"><button class="btn-icon edit" onclick="editExchange(${c.id})">✎</button><button class="btn-icon del" onclick="delItem(exchanges,${c.id},()=>{renderChargeList();renderHome();})">✕</button></div></div>`;
+    if(c.kind==='atm')return `<div class="row"><div style="flex:1"><div style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px"><span class="atm-b">🏧 ATM 인출</span> 카드→현금 ${fL(c.local)}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px">${fD(c.date)}${c.note?' · '+c.note:''}</div></div><div class="row-actions"><button class="btn-icon edit" onclick="editAtm(${c.id})">✎</button><button class="btn-icon del" onclick="delItem(atms,${c.id},()=>{renderChargeList();renderHome();})">✕</button></div></div>`;
+    if(c.kind==='refund')return `<div class="row"><div style="flex:1"><div style="font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="display:inline-flex;align-items:center;background:#FFF4E5;color:#7A4100;font-size:10px;font-weight:500;padding:2px 7px;border-radius:10px;border:.5px solid #F5C97A">↩ 카드→계좌 이전</span> ${fL(c.local)} → ${fK(c.krw)}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px">${fD(c.date)} · 환율 ${c.rate.toFixed(2)}${c.note?' · '+c.note:''}</div></div><div class="row-actions"><button class="btn-icon edit" onclick="editRefund(${c.id})">✎</button><button class="btn-icon del" onclick="delItem(refunds,${c.id},()=>{renderChargeList();renderHome();})">✕</button></div></div>`;
     return '';
   }).join('');
 }
@@ -1064,13 +1138,13 @@ function renderSettle(){
   document.getElementById('s-dep-detail').innerHTML=mems.map(m=>{const kd=deposits.filter(d=>d.mem===m&&d.cur==='KRW'),ld=deposits.filter(d=>d.mem===m&&d.cur==='LOCAL');const tk=kd.reduce((s,d)=>s+d.amt,0),tl=ld.reduce((s,d)=>s+d.amt,0),te=kd.reduce((s,d)=>s+d.krwEquiv,0)+ld.reduce((s,d)=>s+d.krwEquiv,0);return `<div class="row"><div class="av" style="background:${MBM[m]||'#eee'};color:${MCM[m]||'#333'}">${m[0]}</div><div style="flex:1"><div style="font-size:14px;font-weight:500">${m}</div><div style="font-size:11px;color:var(--tx2)">${tk>0?`원화 ${fK(tk)}`:''}${tk>0&&tl>0?'+':''}${tl>0?`${TRIP.country.code} ${fL(tl)}`:''}</div></div><div style="text-align:right"><div style="font-size:14px;font-weight:500;color:${MCM[m]||'#333'}">≈${fK(te)}</div><div style="font-size:10px;color:var(--tx3)">원화환산</div></div></div>`;}).join('');
   const tck=charges.reduce((s,c)=>s+c.krw,0),tcl=charges.reduce((s,c)=>s+c.local,0),tek=exchanges.reduce((s,c)=>s+c.krw,0),tel=exchanges.reduce((s,c)=>s+c.local,0);
   const locInK=deposits.filter(d=>d.cur==='LOCAL').reduce((s,d)=>s+d.krwEquiv,0),r=avgRate(),atmt=atmOut();
-  const krwExpTot=krwExpTotal();
+  const krwExpTot=krwExpTotal(),rfL=refundLocal(),rfK=refundKrw();
   function fr(l,v,col){return `<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>${l}</span><span${col?` style="color:${col}"`:''} >${v}</span></div>`;}
   function ft(l,v,col){return `<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:500;border-top:.5px solid var(--bd3);padding-top:8px;margin-top:4px"><span>${l}</span><span${col?` style="color:${col}"`:''} >${v}</span></div>`;}
   document.getElementById('s-flow').innerHTML=
-    `<div style="font-size:12px;color:var(--tx2);margin-bottom:8px">원화 계좌</div>`+fr('원화 입금',fK(kDep()))+fr('카드 충전(차감)','–'+fK(tck),'#E24B4A')+fr('현금 환전(차감)','–'+fK(tek),'#E24B4A')+(krwExpTot>0?fr('원화 지출(차감)','–'+fK(krwExpTot),'#E24B4A'):'')+ft('계좌 잔액',fK(acct()),acct()<0?'#E24B4A':null)+
+    `<div style="font-size:12px;color:var(--tx2);margin-bottom:8px">원화 계좌</div>`+fr('원화 입금',fK(kDep()))+fr('카드 충전(차감)','–'+fK(tck),'#E24B4A')+fr('현금 환전(차감)','–'+fK(tek),'#E24B4A')+(krwExpTot>0?fr('원화 지출(차감)','–'+fK(krwExpTot),'#E24B4A'):'')+(rfK>0?fr('카드→계좌 이전(반환)','+'+fK(rfK),'#1D9E75'):'')+ft('계좌 잔액',fK(acct()),acct()<0?'#E24B4A':null)+
     `<div class="divider"></div><div style="font-size:12px;color:var(--tx2);margin-bottom:8px">현지화 현금</div>`+fr('현지화 직접 입금',fL(lDep())+` <span style="font-size:11px;color:var(--tx3)">(≈${fK(locInK)})</span>`)+fr('환전 수령',fL(tel))+fr('ATM 인출 수령',fL(atmt))+fr('현금 지출','–'+fL(cashSpent()),'#E24B4A')+ft('현금 잔액',fL(cashBal()),cashBal()<0?'#E24B4A':null)+
-    `<div class="divider"></div><div style="font-size:12px;color:var(--tx2);margin-bottom:8px">${TRIP.payMethods[0]||'카드'}</div>`+fr('충전 합계',fL(tcl))+fr('ATM 인출(차감)','–'+fL(atmt),'#BA7517')+fr('카드 지출','–'+fL(cardSpent()),'#E24B4A')+ft('카드 잔액',fL(cardBal()),cardBal()<0?'#E24B4A':null)+
+    `<div class="divider"></div><div style="font-size:12px;color:var(--tx2);margin-bottom:8px">${TRIP.payMethods[0]||'카드'}</div>`+fr('충전 합계',fL(tcl))+fr('ATM 인출(차감)','–'+fL(atmt),'#BA7517')+(rfL>0?fr('계좌 이전(차감)','–'+fL(rfL),'#E24B4A'):'')+fr('카드 지출','–'+fL(cardSpent()),'#E24B4A')+ft('카드 잔액',fL(cardBal()),cardBal()<0?'#E24B4A':null)+
     `<div style="font-size:11px;color:var(--tx3);margin-top:8px">가중평균 환율 ${r.toFixed(2)}</div>`;
   const breakdown={};mems.forEach(m=>{breakdown[m]=0;});
   expenses.forEach(e=>{const k=eKrw(e);if(e.payer==='공통')mems.forEach(m=>{breakdown[m]+=k/mems.length;});else if(breakdown[e.payer]!==undefined)breakdown[e.payer]+=k;});
