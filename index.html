@@ -297,7 +297,7 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
             <div class="fg"><label>메모</label><input type="text" id="cNote" placeholder="선택" autocomplete="off"/></div>
           </div>
           <div id="cBalWarn" class="warn warn-r"></div>
-          <button id="cBtn" class="btn-pri" onclick="addCharge()">+ 충전 등록</button>
+          <button id="cBtn" class="btn-pri" onclick="addCharge()">+ 충전</button>
         </div>
         <div class="card">
           <div class="card-ttl" id="exTtl">현금 환전 (계좌→현금)</div>
@@ -311,7 +311,7 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
             <div class="fg"><label>메모</label><input type="text" id="exNote" placeholder="선택" autocomplete="off"/></div>
           </div>
           <div id="exBalWarn" class="warn warn-r"></div>
-          <button id="exBtn" class="btn-pri" onclick="addExchange()">+ 환전 등록</button>
+          <button id="exBtn" class="btn-pri" onclick="addExchange()">+ 환전</button>
         </div>
         <div class="card">
           <div class="card-ttl">🏧 ATM 인출 (카드→현금)</div>
@@ -322,7 +322,7 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
           </div>
           <div class="fg" style="margin-bottom:10px"><label>메모</label><input type="text" id="atmNote" placeholder="ATM 수수료는 별도 지출로 입력" autocomplete="off"/></div>
           <div id="atmWarn" class="warn warn-r"></div>
-          <button id="atmBtn" class="btn-pri" onclick="addAtm()">+ ATM 인출 등록</button>
+          <button id="atmBtn" class="btn-pri" onclick="addAtm()">+ ATM인출</button>
         </div>
       </div>
         <!-- 카드 환불 (카드→계좌) -->
@@ -332,16 +332,16 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
             트레블월렛 카드 잔액 일부 또는 전부를 원화로 환전해 계좌로 이전합니다.<br>카드 잔액이 줄고, 환전 환율로 계산된 원화가 계좌에 반환됩니다.
           </div>
           <div class="fr3">
-            <div class="fg"><label id="rfLocalLbl">환불 현지화 금액</label><input type="text" id="rfLocal" placeholder="0" inputmode="numeric" oninput="fmtInput(this);calcRefund('local')"/></div>
-            <div class="fg"><label id="rfRateLbl">환율</label><input type="text" id="rfRate" placeholder="930.00" inputmode="decimal" oninput="calcRefund('rate')"/></div>
-            <div class="fg"><label>환산 원화(자동)</label><input type="text" id="rfKrw" placeholder="자동계산" readonly style="background:var(--bg3)"/></div>
+            <div class="fg"><label id="rfLocalLbl">이전 현지화 금액</label><input type="text" id="rfLocal" placeholder="0" inputmode="numeric" oninput="fmtInput(this)"/></div>
+            <div class="fg"><label id="rfRateLbl">환율</label><input type="text" id="rfRate" placeholder="930.00" inputmode="decimal"/></div>
+            <div class="fg"><label>반환 원화(직접입력)</label><input type="text" id="rfKrw" placeholder="0" inputmode="numeric" oninput="fmtInput(this)"/></div>
           </div>
           <div class="fr2">
             <div class="fg"><label>날짜</label><input type="date" id="rfDate"/></div>
             <div class="fg"><label>메모</label><input type="text" id="rfNote" placeholder="예: 골프장 취소 환불" autocomplete="off"/></div>
           </div>
           <div id="rfWarn" class="warn warn-r"></div>
-          <button id="rfBtn" class="btn-pri" onclick="addRefund()" style="background:#BA7517">+ 카드 환불 등록</button>
+          <button id="rfBtn" class="btn-pri" onclick="addRefund()" style="background:#BA7517">+ 카드 잔액 이전</button>
         </div>
       </div>
       <div class="card"><div class="card-ttl">충전 / 환전 / ATM / 계좌이전 내역</div><div id="chargeList"><div style="text-align:center;padding:1.5rem;color:var(--tx3);font-size:13px">없습니다</div></div></div>
@@ -932,35 +932,29 @@ function calcRefund(ch){
   if(l===0||l<=(cardChgd())) sw('rfWarn',null);
 }
 function addRefund(){
-  const local=nv('rfLocal'),rate=parseFloat(document.getElementById('rfRate').value)||0,date=document.getElementById('rfDate').value,note=document.getElementById('rfNote').value.trim();
+  const local=nv('rfLocal'),rate=parseFloat(document.getElementById('rfRate').value)||0,krw=nv('rfKrw'),date=document.getElementById('rfDate').value,note=document.getElementById('rfNote').value.trim();
   if(!local||!date){alert('이전 금액과 날짜를 입력해 주세요.');return;}
-  if(!rate){alert('환율을 입력해 주세요.\n이전 환율로 원화 계좌에 반환됩니다.');return;}
+  if(!krw){alert('반환 원화 금액을 입력해 주세요.');return;}
   if(local>cardChgd()){
     if(!confirm(`이전 금액 ${fL(local)}이 총 충전액 ${fL(cardChgd())}보다 큽니다.\n계속 등록하시겠습니까?`)) return;
   }
-  const krw=l2k(local,rate);
   refunds.push({id:nid++,local,rate,krw,date:mmdd(date),rawDate:date,note});
-  ['rfLocal','rfRate','rfNote'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('rfKrw').value='';
+  ['rfLocal','rfRate','rfKrw','rfNote'].forEach(id=>document.getElementById(id).value='');
   sw('rfWarn',null);
   renderChargeList();renderHome();markDirty();
 }
 function editRefund(id){
   const r=refunds.find(x=>x.id===id);if(!r)return;
-  openModal('카드→계좌 이전 수정',`<div class="edit-row"><div class="fr3" style="margin-bottom:10px"><div class="fg"><label>환불${TRIP.country.sym}</label><input type="text" id="e_rfLocal" value="${fmtN(r.local)}" inputmode="numeric" oninput="fmtInput(this);calcEditRefund()"/></div><div class="fg"><label>환율</label><input type="text" id="e_rfRate" value="${r.rate}" inputmode="decimal" oninput="calcEditRefund()"/></div><div class="fg"><label>원화환산(자동)</label><input type="text" id="e_rfKrw" value="${fmtN(r.krw)}" readonly style="background:var(--bg3)"/></div></div><div class="fr2"><div class="fg"><label>날짜</label><input type="date" id="e_rfDate" value="${r.rawDate}"/></div><div class="fg"><label>메모</label><input type="text" id="e_rfNote" value="${r.note||''}" autocomplete="off"/></div></div></div><div class="edit-actions"><button class="btn-cancel" onclick="closeModal()">취소</button><button class="btn-save" onclick="saveRefund(${id})">저장</button></div>`);
-}
-function calcEditRefund(){
-  const l=parseFloat(document.getElementById('e_rfLocal').value.replace(/,/g,''))||0;
-  const r=parseFloat(document.getElementById('e_rfRate').value)||0;
-  if(l>0&&r>0) document.getElementById('e_rfKrw').value=fmtN(l2k(l,r));
+  openModal('카드→계좌 이전 수정',`<div class="edit-row"><div class="fr3" style="margin-bottom:10px"><div class="fg"><label>이전${TRIP.country.sym}</label><input type="text" id="e_rfLocal" value="${fmtN(r.local)}" inputmode="numeric" oninput="fmtInput(this)"/></div><div class="fg"><label>환율(선택)</label><input type="text" id="e_rfRate" value="${r.rate||''}" inputmode="decimal"/></div><div class="fg"><label>반환 원화</label><input type="text" id="e_rfKrw" value="${fmtN(r.krw)}" inputmode="numeric" oninput="fmtInput(this)"/></div></div><div class="fr2"><div class="fg"><label>날짜</label><input type="date" id="e_rfDate" value="${r.rawDate}"/></div><div class="fg"><label>메모</label><input type="text" id="e_rfNote" value="${r.note||''}" autocomplete="off"/></div></div></div><div class="edit-actions"><button class="btn-cancel" onclick="closeModal()">취소</button><button class="btn-save" onclick="saveRefund(${id})">저장</button></div>`);
 }
 function saveRefund(id){
   const r=refunds.find(x=>x.id===id);if(!r)return;
   const local=parseFloat(document.getElementById('e_rfLocal').value.replace(/,/g,''))||0;
   const rate=parseFloat(document.getElementById('e_rfRate').value)||0;
+  const krw=parseFloat(document.getElementById('e_rfKrw').value.replace(/,/g,''))||0;
   const date=document.getElementById('e_rfDate').value;
-  if(!local||!rate||!date){alert('이전 금액, 환율, 날짜를 모두 입력해 주세요.');return;}
-  r.local=local;r.rate=rate;r.krw=l2k(local,rate);r.date=mmdd(date);r.rawDate=date;r.note=document.getElementById('e_rfNote').value.trim();
+  if(!local||!krw||!date){alert('이전 금액, 반환 원화, 날짜를 모두 입력해 주세요.');return;}
+  r.local=local;r.rate=rate;r.krw=krw;r.date=mmdd(date);r.rawDate=date;r.note=document.getElementById('e_rfNote').value.trim();
   closeModal();renderChargeList();renderHome();markDirty();
 }
 function checkKrwExpBal(){
