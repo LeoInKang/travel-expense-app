@@ -1013,6 +1013,25 @@ function editExp(id){
 }
 function saveExp(id){const e=expenses.find(x=>x.id===id);if(!e)return;const name=document.getElementById('e_iName').value.trim(),amt=parseFloat(document.getElementById('e_iAmt').value.replace(/,/g,''))||0,pay=document.getElementById('e_iPay').value,date=document.getElementById('e_iDate').value;if(!name||!amt||!date){alert('항목명, 금액, 날짜를 입력해 주세요.');return;}const os=expenses.filter(x=>x.id!==id&&x.pay===pay).reduce((s,x)=>s+x.amt,0);const pc=pay===TRIP.payMethods[0]?cardChgd():cashIn();const av=pc-os;if(amt>av){const w=document.getElementById('e_expWarn');w.style.display='';w.textContent=`⚠ ${pay} 잔액(${fL(av)}) 초과`;return;}e.name=name;e.amt=amt;e.cat='기타';e.pay=pay;e.date=mmdd(date);e.rawDate=date;e.payer=document.getElementById('e_iPayer').value;e.note=document.getElementById('e_iNote').value.trim();closeModal();renderList();renderHome();checkAddBlock();renderSettle();}
 
+function editKrwExp(id){
+  const e=krwExps.find(x=>x.id===id);if(!e)return;
+  const prOpts='<option value="공통">공통(균등)</option>'+TRIP.members.map(m=>`<option value="${m}"${e.payer===m?' selected':''}>${m}</option>`).join('');
+  openModal('원화지출 수정',`<div class="edit-row"><div class="fg" style="margin-bottom:10px"><label>항목명</label><input type="text" id="ek_name" value="${e.name}" autocomplete="off"/></div><div class="fr3" style="margin-bottom:10px"><div class="fg"><label>금액(원화)</label><input type="text" id="ek_amt" value="${fmtN(e.amt)}" inputmode="numeric" oninput="fmtInput(this)"/></div><div class="fg"><label>날짜</label><input type="date" id="ek_date" value="${e.rawDate}"/></div><div class="fg"><label>결제자</label><select id="ek_payer" style="min-height:44px">${prOpts}</select></div></div><div class="fg" style="margin-bottom:8px"><label>메모</label><input type="text" id="ek_note" value="${e.note||''}" autocomplete="off"/></div></div><div id="ek_warn" class="warn warn-r" style="margin-top:8px"></div><div class="edit-actions"><button class="btn-cancel" onclick="closeModal()">취소</button><button class="btn-save" onclick="saveKrwExp(${id})">저장</button></div>`);
+}
+function saveKrwExp(id){
+  const e=krwExps.find(x=>x.id===id);if(!e)return;
+  const name=document.getElementById('ek_name').value.trim();
+  const amt=parseFloat(document.getElementById('ek_amt').value.replace(/,/g,''))||0;
+  const date=document.getElementById('ek_date').value;
+  if(!name||!amt||!date){alert('항목명, 금액, 날짜를 입력해 주세요.');return;}
+  // 본인 제외 원화지출 합계 제외한 계좌 잔액 체크
+  const otherKrw=krwExps.filter(x=>x.id!==id).reduce((s,x)=>s+x.amt,0);
+  const availAcct=kDep()-tChgKrw()-krwExpTotal()+e.amt; // 현재 항목 제외한 가용 잔액
+  if(amt>availAcct){const w=document.getElementById('ek_warn');w.style.display='';w.textContent=`⚠ 계좌 잔액(${fK(availAcct)}) 초과`;return;}
+  e.name=name;e.amt=amt;e.date=mmdd(date);e.rawDate=date;e.payer=document.getElementById('ek_payer').value;e.note=document.getElementById('ek_note').value.trim();
+  closeModal();renderList();renderHome();renderSettle();markDirty();
+}
+
 /* ──────────────────────────────
    렌더 함수
 ────────────────────────────── */
@@ -1025,8 +1044,9 @@ function renderHome(){
   document.getElementById('v-cash').textContent=fL(csb);
   document.getElementById('v-cash-sub').textContent='환전'+exchanges.length+'·ATM'+atms.length;
   const tj=expenses.reduce((s,e)=>s+e.amt,0);
-  document.getElementById('v-tot').textContent=fL(tj);
-  document.getElementById('v-tot-krw').textContent=fK(expenses.reduce((s,e)=>s+eKrw(e),0))+' 상당';
+  const tjKrw=expenses.reduce((s,e)=>s+eKrw(e),0)+krwExpTotal();
+  document.getElementById('v-tot').textContent=fL(tj)+(krwExpTotal()>0?` +${fK(krwExpTotal())}`:'' );
+  document.getElementById('v-tot-krw').textContent=fK(tjKrw)+' 상당';
   document.getElementById('v-tot-dep').textContent=fK(totalDepKE());
   document.getElementById('v-tot-dep-sub').textContent=deposits.length+'건';
 
@@ -1115,7 +1135,7 @@ function renderList(){
       const pb=e.pay===TRIP.payMethods[0]?`<span class="tw-b">카드</span>`:`<span class="cash-b">현금</span>`;
       return `<div class="row"><div style="flex:1;min-width:0"><div style="font-size:13px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">${e.name}${pr}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px;display:flex;align-items:center;gap:5px">${fD(e.date)} ${pb}${e.note?' · '+e.note:''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:500">${fL(e.amt)}</div><div style="font-size:10px;color:var(--tx3)">${fK(eKrw(e))}</div></div><div class="row-actions"><button class="btn-icon edit" onclick="editExp(${e.id})">✎</button><button class="btn-icon del" onclick="delItem(expenses,${e.id},()=>{renderList();renderHome();checkAddBlock()})">✕</button></div></div>`;
     } else {
-      return `<div class="row"><div style="flex:1;min-width:0"><div style="font-size:13px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">${e.name}<span class="krw-b">원화</span>${pr}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px">${fD(e.date)} · 계좌차감${e.note?' · '+e.note:''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:500">${fK(e.amt)}</div></div><div class="row-actions"><button class="btn-icon del" onclick="delItem(krwExps,${e.id},()=>{renderList();renderHome();})">✕</button></div></div>`;
+      return `<div class="row"><div style="flex:1;min-width:0"><div style="font-size:13px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">${e.name}<span class="krw-b">원화</span>${pr}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px">${fD(e.date)} · 계좌차감${e.note?' · '+e.note:''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:500">${fK(e.amt)}</div></div><div class="row-actions"><button class="btn-icon edit" onclick="editKrwExp(${e.id})">✎</button><button class="btn-icon del" onclick="delItem(krwExps,${e.id},()=>{renderList();renderHome();})">✕</button></div></div>`;
     }
   }).join('');
 }
