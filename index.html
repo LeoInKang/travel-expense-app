@@ -1095,11 +1095,29 @@ function renderChargeList(){
 
 function renderList(){
   const fd=document.getElementById('fDate').value,fp=document.getElementById('fPay').value;
-  let items=[...expenses];if(fd)items=items.filter(e=>e.date===fd);if(fp)items=items.filter(e=>e.pay===fp);
-  items.sort((a,b)=>b.rawDate.localeCompare(a.rawDate));
+  // 외화지출 + 원화지출 합산, 결제수단 필터는 외화지출에만 적용
+  let forItems=[...expenses];
+  if(fd) forItems=forItems.filter(e=>e.date===fd);
+  if(fp) forItems=forItems.filter(e=>e.pay===fp);
+
+  let krwItems=fp?[]:([...krwExps].filter(e=>!fd||e.date===fd));
+
+  const all=[
+    ...forItems.map(e=>({kind:'exp',obj:e})),
+    ...krwItems.map(e=>({kind:'krw',obj:e})),
+  ].sort((a,b)=>b.obj.rawDate.localeCompare(a.obj.rawDate));
+
   const el=document.getElementById('expList');
-  if(!items.length){el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--tx3);font-size:13px">없습니다</div>';return;}
-  el.innerHTML=items.map(e=>{const pb=e.pay===TRIP.payMethods[0]?`<span class="tw-b">카드</span>`:`<span class="cash-b">현금</span>`;const pr=e.payer!=='공통'?`<span class="chip" style="background:${MBM[e.payer]||'#eee'};color:${MCM[e.payer]||'#333'}">${e.payer}</span>`:'';return `<div class="row"><div style="flex:1;min-width:0"><div style="font-size:13px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">${e.name}${pr}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px;display:flex;align-items:center;gap:5px">${fD(e.date)} ${pb}${e.note?' · '+e.note:''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:500">${fL(e.amt)}</div><div style="font-size:10px;color:var(--tx3)">${fK(eKrw(e))}</div></div><div class="row-actions"><button class="btn-icon edit" onclick="editExp(${e.id})">✎</button><button class="btn-icon del" onclick="delItem(expenses,${e.id},()=>{renderList();renderHome();checkAddBlock()})">✕</button></div></div>`;}).join('');
+  if(!all.length){el.innerHTML='<div style="text-align:center;padding:2rem;color:var(--tx3);font-size:13px">없습니다</div>';return;}
+  el.innerHTML=all.map(({kind,obj:e})=>{
+    const pr=e.payer!=='공통'?`<span class="chip" style="background:${MBM[e.payer]||'#eee'};color:${MCM[e.payer]||'#333'}">${e.payer}</span>`:'';
+    if(kind==='exp'){
+      const pb=e.pay===TRIP.payMethods[0]?`<span class="tw-b">카드</span>`:`<span class="cash-b">현금</span>`;
+      return `<div class="row"><div style="flex:1;min-width:0"><div style="font-size:13px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">${e.name}${pr}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px;display:flex;align-items:center;gap:5px">${fD(e.date)} ${pb}${e.note?' · '+e.note:''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:500">${fL(e.amt)}</div><div style="font-size:10px;color:var(--tx3)">${fK(eKrw(e))}</div></div><div class="row-actions"><button class="btn-icon edit" onclick="editExp(${e.id})">✎</button><button class="btn-icon del" onclick="delItem(expenses,${e.id},()=>{renderList();renderHome();checkAddBlock()})">✕</button></div></div>`;
+    } else {
+      return `<div class="row"><div style="flex:1;min-width:0"><div style="font-size:13px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">${e.name}<span class="krw-b">원화</span>${pr}</div><div style="font-size:11px;color:var(--tx3);margin-top:2px">${fD(e.date)} · 계좌차감${e.note?' · '+e.note:''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:500">${fK(e.amt)}</div></div><div class="row-actions"><button class="btn-icon del" onclick="delItem(krwExps,${e.id},()=>{renderList();renderHome();})">✕</button></div></div>`;
+    }
+  }).join('');
 }
 
 
