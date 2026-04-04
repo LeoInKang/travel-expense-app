@@ -261,7 +261,7 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
         <div class="card-ttl">입금 등록</div>
         <div class="fr3">
           <div class="fg"><label>참석자</label><select id="dMem" style="min-height:44px"></select></div>
-          <div class="fg"><label>통화</label><select id="dCur" onchange="onDepCurChange()" style="min-height:44px"><option value="KRW">원화(₩)</option><option value="LOCAL">현지화</option></select></div>
+          <div class="fg"><label>통화</label><select id="dCur" onchange="onDepCurChange()" style="min-height:44px"><option value="KRW">원화(₩)</option><option value="LOCAL">외화</option></select></div>
           <div class="fg"><label id="dAmtLbl">입금액(원)</label><input type="text" id="dAmt" placeholder="0" inputmode="numeric" oninput="fmtInput(this);calcDepLocal()"/></div>
         </div>
         <div class="fr2">
@@ -275,7 +275,7 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
             <div class="fg"><label>원화환산(자동)</label><input type="text" id="dLocalKrw" placeholder="자동" readonly style="background:var(--bg3)"/></div>
           </div>
         </div>
-        <button class="btn-pri" onclick="addDeposit()">+ 입금 등록</button>
+        <button class="btn-pri" onclick="addDeposit()">+ 입금</button>
       </div>
       <div class="card"><div class="card-ttl">입금 내역</div><div id="depList"><div style="text-align:center;padding:1.5rem;color:var(--tx3);font-size:13px">없습니다</div></div></div>
     </div>
@@ -332,8 +332,8 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
           </div>
           <div class="fr3">
             <div class="fg"><label id="rfLocalLbl">이전 현지화 금액</label><input type="text" id="rfLocal" placeholder="0" inputmode="numeric" oninput="fmtInput(this)"/></div>
-            <div class="fg"><label id="rfRateLbl">환율</label><input type="text" id="rfRate" placeholder="930.00" inputmode="decimal"/></div>
             <div class="fg"><label>반환 원화(직접입력)</label><input type="text" id="rfKrw" placeholder="0" inputmode="numeric" oninput="fmtInput(this)"/></div>
+            <div class="fg"><label id="rfRateLbl">환율(선택)</label><input type="text" id="rfRate" placeholder="930.00" inputmode="decimal"/></div>
           </div>
           <div class="fr2">
             <div class="fg"><label>날짜</label><input type="date" id="rfDate"/></div>
@@ -364,7 +364,7 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
           </div>
           <div id="payWarn" class="warn warn-r"></div>
           <div id="balPreview" class="bal-preview"></div>
-          <button id="addBtn" class="btn-pri" onclick="addExp()">+ 지출 추가</button>
+          <button id="addBtn" class="btn-pri" onclick="addExp()">+ 외화지출</button>
         </div>
       </div>
       <!-- 원화 직접 지출 -->
@@ -381,7 +381,7 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
         <div class="fg" style="margin-bottom:10px"><label>메모</label><input type="text" id="krwExpNote" placeholder="선택" autocomplete="off"/></div>
         <div id="krwExpWarn" class="warn warn-r"></div>
         <div id="krwExpPreview" class="bal-preview"></div>
-        <button id="krwExpBtn" class="btn-pri" onclick="addKrwExp()">+ 원화 지출 추가</button>
+        <button id="krwExpBtn" class="btn-pri" onclick="addKrwExp()">+ 원화지출</button>
       </div>
     </div>
 
@@ -596,13 +596,16 @@ function initApp(){
   document.getElementById('exLocalLbl').textContent=`수령${code}(${sym})`;
   document.getElementById('exRateLbl').textContent=`환율(${rl})`;
   document.getElementById('atmLocalLbl').textContent=`인출${code}(${sym})`;
-  document.getElementById('rfLocalLbl').textContent=`환불${code}(${sym})`;
-  document.getElementById('rfRateLbl').textContent=`환율(${rl})`;
+  document.getElementById('rfLocalLbl').textContent=`이전${code}(${sym})`;
+  document.getElementById('rfRateLbl').textContent=`환율(선택)`;
   document.getElementById('tw-lbl').textContent=`${TRIP.payMethods[0]||'카드'} 잔액`;
   document.getElementById('tot-lbl').textContent=`총 지출(${code})`;
   document.getElementById('iAmtLbl').textContent=`금액(${sym})`;
-  document.getElementById('depositInfoBox').innerHTML=`원화 입금 → 계좌에 쌓여 충전/환전 사용<br>현지화 입금 → 현금 잔액에 직접 추가`;
+  document.getElementById('depositInfoBox').innerHTML=`원화 입금 → 계좌에 쌓여 충전/환전 사용<br>외화(${code}) 입금 → 현금 잔액에 직접 추가`;
   document.getElementById('rateBoxDep').textContent=`환율: ${rl}`;
+  // 입금 통화 옵션 텍스트를 화폐단위 포함으로 업데이트
+  document.getElementById('dCur').options[1].text=`외화(${code})`;
+  document.getElementById('dAmtLbl').textContent='입금액(원)';
 
   document.getElementById('p-setup').style.display='none';
   document.getElementById('mainTabs').style.display='';
@@ -929,7 +932,7 @@ function addRefund(){
 }
 function editRefund(id){
   const r=refunds.find(x=>x.id===id);if(!r)return;
-  openModal('카드→계좌 이전 수정',`<div class="edit-row"><div class="fr3" style="margin-bottom:10px"><div class="fg"><label>이전${TRIP.country.sym}</label><input type="text" id="e_rfLocal" value="${fmtN(r.local)}" inputmode="numeric" oninput="fmtInput(this)"/></div><div class="fg"><label>환율(선택)</label><input type="text" id="e_rfRate" value="${r.rate||''}" inputmode="decimal"/></div><div class="fg"><label>반환 원화</label><input type="text" id="e_rfKrw" value="${fmtN(r.krw)}" inputmode="numeric" oninput="fmtInput(this)"/></div></div><div class="fr2"><div class="fg"><label>날짜</label><input type="date" id="e_rfDate" value="${r.rawDate}"/></div><div class="fg"><label>메모</label><input type="text" id="e_rfNote" value="${r.note||''}" autocomplete="off"/></div></div></div><div class="edit-actions"><button class="btn-cancel" onclick="closeModal()">취소</button><button class="btn-save" onclick="saveRefund(${id})">저장</button></div>`);
+  openModal('카드→계좌 이전 수정',`<div class="edit-row"><div class="fr3" style="margin-bottom:10px"><div class="fg"><label>이전${TRIP.country.sym}</label><input type="text" id="e_rfLocal" value="${fmtN(r.local)}" inputmode="numeric" oninput="fmtInput(this)"/></div><div class="fg"><label>반환 원화</label><input type="text" id="e_rfKrw" value="${fmtN(r.krw)}" inputmode="numeric" oninput="fmtInput(this)"/></div><div class="fg"><label>환율(선택)</label><input type="text" id="e_rfRate" value="${r.rate||''}" inputmode="decimal"/></div></div><div class="fr2"><div class="fg"><label>날짜</label><input type="date" id="e_rfDate" value="${r.rawDate}"/></div><div class="fg"><label>메모</label><input type="text" id="e_rfNote" value="${r.note||''}" autocomplete="off"/></div></div></div><div class="edit-actions"><button class="btn-cancel" onclick="closeModal()">취소</button><button class="btn-save" onclick="saveRefund(${id})">저장</button></div>`);
 }
 function saveRefund(id){
   const r=refunds.find(x=>x.id===id);if(!r)return;
