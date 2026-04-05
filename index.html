@@ -760,6 +760,7 @@ function _showScreen(name){
 
   if(name==='landing'){
     document.getElementById('p-landing').style.display='flex';
+    renderLanding();
   } else if(name==='hist'){
     document.getElementById('p-setup').style.display='';
     document.getElementById('histSection').style.display='';
@@ -1402,22 +1403,8 @@ function renderSettle(){
   document.getElementById('s-note').textContent=totExp===0?'지출을 입력하면 정산 결과가 계산됩니다.':`총 지출 ${fK(totExp)} · 인당(팀당) ${fK(perPerson)}`;
 }
 
-function goLanding(){
-  if(TRIP.name) saveCurrentTrip(true);
-  _screenStack=[];
-  _navigate('landing');
-}
-function hideLanding(){}
-function showHistFromLanding(){ _navigate('hist'); }
-function loadTripFromLanding(id){ loadTrip(id); }
-
-renderCountryGrid();
-// 초기 화면: 대문 항상 표시, 최근 여행 리스트업
-(function(){
+function renderLanding(){
   const list=loadHistory();
-  _screenStack=[];
-  _navigate('landing');
-
   if(list.length>0){
     document.getElementById('landingRecent').style.display='';
     document.getElementById('btnLandingHist').style.display='';
@@ -1442,8 +1429,24 @@ renderCountryGrid();
         </div>
       </div>`;
     }).join('');
+  } else {
+    document.getElementById('landingRecent').style.display='none';
+    document.getElementById('btnLandingHist').style.display='none';
   }
-})();
+}
+function goLanding(){
+  if(TRIP.name) saveCurrentTrip(true);
+  _screenStack=[];
+  _navigate('landing');
+}
+function hideLanding(){}
+function showHistFromLanding(){ _navigate('hist'); }
+function loadTripFromLanding(id){ loadTrip(id); }
+
+renderCountryGrid();
+// 초기 화면: 대문
+_screenStack=[];
+_navigate('landing');
 </script>
 </body>
 </html>
