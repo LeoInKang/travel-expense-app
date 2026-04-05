@@ -173,6 +173,19 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
 .feed-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
 .feed-date-hdr{font-size:11px;font-weight:500;color:var(--tx3);padding:8px 0 4px;border-bottom:.5px solid var(--bd3);margin-top:4px}
 /* 잔액 미리보기 */
+/* 충전/환전 탭 스위처 */
+.charge-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:14px;background:var(--bg2);padding:4px;border-radius:var(--rmd)}
+.charge-tab{padding:10px 4px;border:none;background:transparent;cursor:pointer;border-radius:6px;font-size:11px;color:var(--tx2);text-align:center;line-height:1.3;min-height:52px;display:flex;flex-direction:column;align-items:center;gap:3px}
+.charge-tab .cti{font-size:18px}
+.charge-tab.on{background:var(--bg1);color:var(--tx1);font-weight:600;border:.5px solid var(--bd3)}
+/* 퀵 입력 */
+.quick-row{display:flex;gap:8px;margin-bottom:10px;align-items:flex-end}
+.quick-row .fg{flex:1}
+.detail-toggle{font-size:12px;color:var(--tx3);cursor:pointer;padding:4px 0 10px;display:flex;align-items:center;gap:4px;user-select:none}
+.detail-fields{display:none}
+.detail-fields.open{display:block}
+/* 날짜 기억 표시 */
+.date-mem{font-size:10px;color:var(--tx3);margin-top:2px}
 .bal-preview{background:var(--bg2);border-radius:var(--rmd);padding:10px 12px;font-size:12px;margin-bottom:6px;color:var(--tx2);display:none}
 /* 여행 히스토리 */
 .hist-card{background:var(--bg1);border:.5px solid var(--bd3);border-radius:var(--rlg);padding:14px 16px;margin-bottom:10px;transition:all .15s}
@@ -399,64 +412,72 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
     <div id="p-charge" style="display:none">
       <div class="rate-box" id="chargeRateBox"></div>
       <div id="chargeBlockWarn" class="warn warn-r"></div>
-      <div id="chargeFormWrap">
-        <div class="card">
-          <div class="card-ttl" id="chargeTtl">카드 충전 (계좌→카드)</div>
-          <div class="fr3">
-            <div class="fg"><label>원화(계좌차감)</label><input type="text" id="cKrw" placeholder="0" inputmode="numeric" oninput="fmtInput(this);calcCharge('krw')"/></div>
-            <div class="fg"><label id="cLocalLbl">현지화</label><input type="text" id="cLocal" placeholder="0" inputmode="numeric" oninput="fmtInput(this);calcCharge('local')"/></div>
-            <div class="fg"><label id="cRateLbl">환율</label><input type="text" id="cRate" placeholder="930.00" inputmode="decimal" oninput="calcCharge('rate')"/></div>
-          </div>
-          <div class="fr2">
-            <div class="fg"><label>날짜</label><input type="date" id="cDate"/></div>
-            <div class="fg"><label>메모</label><input type="text" id="cNote" placeholder="선택" autocomplete="off"/></div>
-          </div>
-          <div id="cBalWarn" class="warn warn-r"></div>
-          <button id="cBtn" class="btn-pri" onclick="addCharge()">+ 충전</button>
+      <!-- 탭 스위처 -->
+      <div class="charge-tabs">
+        <button class="charge-tab on" id="ct-0" onclick="switchChargeTab(0)"><span class="cti">💳</span>카드<br>충전</button>
+        <button class="charge-tab" id="ct-1" onclick="switchChargeTab(1)"><span class="cti">🔄</span>현금<br>환전</button>
+        <button class="charge-tab" id="ct-2" onclick="switchChargeTab(2)"><span class="cti">🏧</span>ATM<br>인출</button>
+        <button class="charge-tab" id="ct-3" onclick="switchChargeTab(3)"><span class="cti">↩</span>카드잔액<br>이전</button>
+      </div>
+      <!-- 카드 충전 -->
+      <div id="cp-0" class="card">
+        <div class="card-ttl" id="chargeTtl">카드 충전 (계좌→카드)</div>
+        <div class="fr3">
+          <div class="fg"><label>원화(계좌차감)</label><input type="text" id="cKrw" placeholder="0" inputmode="numeric" oninput="fmtInput(this);calcCharge('krw')"/></div>
+          <div class="fg"><label id="cLocalLbl">현지화</label><input type="text" id="cLocal" placeholder="0" inputmode="numeric" oninput="fmtInput(this);calcCharge('local')"/></div>
+          <div class="fg"><label id="cRateLbl">환율</label><input type="text" id="cRate" placeholder="930.00" inputmode="decimal" oninput="calcCharge('rate')"/></div>
         </div>
-        <div class="card">
-          <div class="card-ttl" id="exTtl">현금 환전 (계좌→현금)</div>
-          <div class="fr3">
-            <div class="fg"><label>원화(계좌차감)</label><input type="text" id="exKrw" placeholder="0" inputmode="numeric" oninput="fmtInput(this);calcEx('krw')"/></div>
-            <div class="fg"><label id="exLocalLbl">현지화</label><input type="text" id="exLocal" placeholder="0" inputmode="numeric" oninput="fmtInput(this);calcEx('local')"/></div>
-            <div class="fg"><label id="exRateLbl">환율</label><input type="text" id="exRate" placeholder="930.00" inputmode="decimal" oninput="calcEx('rate')"/></div>
-          </div>
-          <div class="fr2">
-            <div class="fg"><label>날짜</label><input type="date" id="exDate"/></div>
-            <div class="fg"><label>메모</label><input type="text" id="exNote" placeholder="선택" autocomplete="off"/></div>
-          </div>
-          <div id="exBalWarn" class="warn warn-r"></div>
-          <button id="exBtn" class="btn-pri" onclick="addExchange()">+ 환전</button>
+        <div class="fr2">
+          <div class="fg"><label>날짜</label><input type="date" id="cDate"/></div>
+          <div class="fg"><label>메모</label><input type="text" id="cNote" placeholder="선택" autocomplete="off"/></div>
         </div>
-        <div class="card">
-          <div class="card-ttl">🏧 ATM 인출 (카드→현금)</div>
-          <div class="atm-box">트레블월렛 카드로 현지 ATM에서 현금 인출 시 사용합니다.<br>카드 잔액이 줄고 현금 잔액이 늘어납니다 (환율 변환 없음).</div>
-          <div class="fr2">
-            <div class="fg"><label id="atmLocalLbl">인출 현지화 금액</label><input type="text" id="atmLocal" placeholder="0" inputmode="numeric" oninput="fmtInput(this);checkAtmBal()"/></div>
-            <div class="fg"><label>날짜</label><input type="date" id="atmDate"/></div>
-          </div>
-          <div class="fg" style="margin-bottom:10px"><label>메모</label><input type="text" id="atmNote" placeholder="ATM 수수료는 별도 지출로 입력" autocomplete="off"/></div>
-          <div id="atmWarn" class="warn warn-r"></div>
-          <button id="atmBtn" class="btn-pri" onclick="addAtm()">+ ATM인출</button>
+        <div id="cBalWarn" class="warn warn-r"></div>
+        <button id="cBtn" class="btn-pri" onclick="addCharge()">+ 충전</button>
+      </div>
+      <!-- 현금 환전 -->
+      <div id="cp-1" class="card" style="display:none">
+        <div class="card-ttl" id="exTtl">현금 환전 (계좌→현금)</div>
+        <div class="fr3">
+          <div class="fg"><label>원화(계좌차감)</label><input type="text" id="exKrw" placeholder="0" inputmode="numeric" oninput="fmtInput(this);calcEx('krw')"/></div>
+          <div class="fg"><label id="exLocalLbl">현지화</label><input type="text" id="exLocal" placeholder="0" inputmode="numeric" oninput="fmtInput(this);calcEx('local')"/></div>
+          <div class="fg"><label id="exRateLbl">환율</label><input type="text" id="exRate" placeholder="930.00" inputmode="decimal" oninput="calcEx('rate')"/></div>
         </div>
-        <!-- 카드 환불 (카드→계좌) -->
-        <div class="card">
-          <div class="card-ttl">↩ 카드→계좌 이전 (잔액 환전)</div>
-          <div style="background:#FFF4E5;border-radius:var(--rmd);padding:10px 12px;font-size:12px;color:#7A4100;margin-bottom:12px;border:.5px solid #F5C97A">
-            트레블월렛 카드 잔액 일부 또는 전부를 원화로 환전해 계좌로 이전합니다.<br>카드 잔액이 줄고, 환전 환율로 계산된 원화가 계좌에 반환됩니다.
-          </div>
-          <div class="fr3">
-            <div class="fg"><label id="rfLocalLbl">이전 현지화 금액</label><input type="text" id="rfLocal" placeholder="0" inputmode="numeric" oninput="fmtInput(this)"/></div>
-            <div class="fg"><label>반환 원화(직접입력)</label><input type="text" id="rfKrw" placeholder="0" inputmode="numeric" oninput="fmtInput(this)"/></div>
-            <div class="fg"><label id="rfRateLbl">환율(선택)</label><input type="text" id="rfRate" placeholder="930.00" inputmode="decimal"/></div>
-          </div>
-          <div class="fr2">
-            <div class="fg"><label>날짜</label><input type="date" id="rfDate"/></div>
-            <div class="fg"><label>메모</label><input type="text" id="rfNote" placeholder="예: 골프장 취소 환불" autocomplete="off"/></div>
-          </div>
-          <div id="rfWarn" class="warn warn-r"></div>
-          <button id="rfBtn" class="btn-pri" onclick="addRefund()" style="background:#BA7517">+ 카드 잔액 이전</button>
+        <div class="fr2">
+          <div class="fg"><label>날짜</label><input type="date" id="exDate"/></div>
+          <div class="fg"><label>메모</label><input type="text" id="exNote" placeholder="선택" autocomplete="off"/></div>
         </div>
+        <div id="exBalWarn" class="warn warn-r"></div>
+        <button id="exBtn" class="btn-pri" onclick="addExchange()">+ 환전</button>
+      </div>
+      <!-- ATM 인출 -->
+      <div id="cp-2" class="card" style="display:none">
+        <div class="card-ttl">🏧 ATM 인출 (카드→현금)</div>
+        <div class="atm-box">트레블월렛 카드로 현지 ATM에서 현금 인출 시 사용합니다.<br>카드 잔액이 줄고 현금 잔액이 늘어납니다 (환율 변환 없음).</div>
+        <div class="fr2">
+          <div class="fg"><label id="atmLocalLbl">인출 현지화 금액</label><input type="text" id="atmLocal" placeholder="0" inputmode="numeric" oninput="fmtInput(this);checkAtmBal()"/></div>
+          <div class="fg"><label>날짜</label><input type="date" id="atmDate"/></div>
+        </div>
+        <div class="fg" style="margin-bottom:10px"><label>메모</label><input type="text" id="atmNote" placeholder="ATM 수수료는 별도 지출로 입력" autocomplete="off"/></div>
+        <div id="atmWarn" class="warn warn-r"></div>
+        <button id="atmBtn" class="btn-pri" onclick="addAtm()">+ ATM인출</button>
+      </div>
+      <!-- 카드잔액 이전 -->
+      <div id="cp-3" class="card" style="display:none">
+        <div class="card-ttl">↩ 카드→계좌 이전 (잔액 환전)</div>
+        <div style="background:#FFF4E5;border-radius:var(--rmd);padding:10px 12px;font-size:12px;color:#7A4100;margin-bottom:12px;border:.5px solid #F5C97A">
+          트레블월렛 카드 잔액 일부 또는 전부를 원화로 환전해 계좌로 이전합니다.<br>카드 잔액이 줄고, 환전 환율로 계산된 원화가 계좌에 반환됩니다.
+        </div>
+        <div class="fr3">
+          <div class="fg"><label id="rfLocalLbl">이전 현지화 금액</label><input type="text" id="rfLocal" placeholder="0" inputmode="numeric" oninput="fmtInput(this)"/></div>
+          <div class="fg"><label>반환 원화(직접입력)</label><input type="text" id="rfKrw" placeholder="0" inputmode="numeric" oninput="fmtInput(this)"/></div>
+          <div class="fg"><label id="rfRateLbl">환율(선택)</label><input type="text" id="rfRate" placeholder="930.00" inputmode="decimal"/></div>
+        </div>
+        <div class="fr2">
+          <div class="fg"><label>날짜</label><input type="date" id="rfDate"/></div>
+          <div class="fg"><label>메모</label><input type="text" id="rfNote" placeholder="선택" autocomplete="off"/></div>
+        </div>
+        <div id="rfWarn" class="warn warn-r"></div>
+        <button id="rfBtn" class="btn-pri" onclick="addRefund()" style="background:#BA7517">+ 카드 잔액 이전</button>
       </div>
       <div class="card"><div class="card-ttl">충전 / 환전 / ATM / 계좌이전 내역</div><div id="chargeList"><div style="text-align:center;padding:1.5rem;color:var(--tx3);font-size:13px">없습니다</div></div></div>
     </div>
@@ -466,36 +487,66 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
       <div id="addBlockWarn" class="warn warn-r"></div>
       <div id="addFormWrap">
         <div class="card">
-          <div class="card-ttl">외화 지출 (카드 / 현금)</div>
-          <div class="fg" style="margin-bottom:10px"><label>항목명</label><input type="text" id="iName" placeholder="예: 골프장 그린피" autocomplete="off"/></div>
-          <div class="fr3">
-            <div class="fg"><label id="iAmtLbl">금액</label><input type="text" id="iAmt" placeholder="0" inputmode="numeric" oninput="fmtInput(this);checkPayBal()"/></div>
-            <div class="fg"><label>결제수단</label><select id="iPay" onchange="checkPayBal()" style="min-height:44px"></select></div>
-            <div class="fg"><label>날짜</label><input type="date" id="iDate"/></div>
+          <div class="card-ttl">외화 지출</div>
+          <!-- 퀵 입력: 항목명 + 금액 + 결제수단 -->
+          <div class="fg" style="margin-bottom:10px">
+            <label>항목명</label>
+            <input type="text" id="iName" placeholder="예: 골프장 그린피" autocomplete="off"/>
           </div>
-          <div class="fr2">
-            <div class="fg"><label>결제자</label><select id="iPayer" style="min-height:44px"></select></div>
-            <div class="fg"><label>메모</label><input type="text" id="iNote" placeholder="선택" autocomplete="off"/></div>
+          <div class="quick-row">
+            <div class="fg">
+              <label id="iAmtLbl">금액</label>
+              <input type="text" id="iAmt" placeholder="0" inputmode="numeric" oninput="fmtInput(this);checkPayBal()"/>
+            </div>
+            <div class="fg">
+              <label>결제수단</label>
+              <select id="iPay" onchange="checkPayBal()" style="min-height:44px"></select>
+            </div>
           </div>
           <div id="payWarn" class="warn warn-r"></div>
           <div id="balPreview" class="bal-preview"></div>
+          <!-- 상세 토글 -->
+          <div class="detail-toggle" onclick="toggleExpDetail()">
+            <span id="expDetailArrow">▶</span> 날짜 · 결제자 · 메모
+          </div>
+          <div id="expDetailFields" class="detail-fields">
+            <div class="fr2" style="margin-bottom:10px">
+              <div class="fg"><label>날짜</label><input type="date" id="iDate"/></div>
+              <div class="fg"><label>결제자</label><select id="iPayer" style="min-height:44px"></select></div>
+            </div>
+            <div class="fg" style="margin-bottom:10px"><label>메모</label><input type="text" id="iNote" placeholder="선택" autocomplete="off"/></div>
+          </div>
           <button id="addBtn" class="btn-pri" onclick="addExp()">+ 외화지출</button>
         </div>
       </div>
       <!-- 원화 직접 지출 -->
       <div class="card">
-        <div class="card-ttl">💴 원화 지출 (계좌 차감)</div>
-        <div style="background:#E6F1FB;border-radius:var(--rmd);padding:10px 12px;font-size:12px;color:#0C447C;margin-bottom:12px">한국에서 원화로 직접 결제하는 경우입니다. (예: 공항 주차, 여행 보험, 국내 예약금 등)<br>원화 계좌 잔액에서 직접 차감됩니다.</div>
+        <div class="card-ttl">💴 원화 지출</div>
         <div id="krwExpBlockWarn" class="warn warn-r"></div>
-        <div class="fg" style="margin-bottom:10px"><label>항목명</label><input type="text" id="krwExpName" placeholder="예: 공항 주차" autocomplete="off"/></div>
-        <div class="fr3">
-          <div class="fg"><label>금액(원화)</label><input type="text" id="krwExpAmt" placeholder="0" inputmode="numeric" oninput="fmtInput(this);checkKrwExpBal()"/></div>
-          <div class="fg"><label>날짜</label><input type="date" id="krwExpDate"/></div>
-          <div class="fg"><label>결제자</label><select id="krwExpPayer" style="min-height:44px"></select></div>
+        <div class="fg" style="margin-bottom:10px">
+          <label>항목명</label>
+          <input type="text" id="krwExpName" placeholder="예: 공항 주차" autocomplete="off"/>
         </div>
-        <div class="fg" style="margin-bottom:10px"><label>메모</label><input type="text" id="krwExpNote" placeholder="선택" autocomplete="off"/></div>
+        <div class="quick-row">
+          <div class="fg">
+            <label>금액(원화)</label>
+            <input type="text" id="krwExpAmt" placeholder="0" inputmode="numeric" oninput="fmtInput(this);checkKrwExpBal()"/>
+          </div>
+          <div class="fg">
+            <label>날짜</label>
+            <input type="date" id="krwExpDate"/>
+          </div>
+        </div>
         <div id="krwExpWarn" class="warn warn-r"></div>
         <div id="krwExpPreview" class="bal-preview"></div>
+        <!-- 상세 토글 -->
+        <div class="detail-toggle" onclick="toggleKrwExpDetail()">
+          <span id="krwExpDetailArrow">▶</span> 결제자 · 메모
+        </div>
+        <div id="krwExpDetailFields" class="detail-fields">
+          <div class="fg" style="margin-bottom:10px"><label>결제자</label><select id="krwExpPayer" style="min-height:44px"></select></div>
+          <div class="fg" style="margin-bottom:10px"><label>메모</label><input type="text" id="krwExpNote" placeholder="선택" autocomplete="off"/></div>
+        </div>
         <button id="krwExpBtn" class="btn-pri" onclick="addKrwExp()">+ 원화지출</button>
       </div>
     </div>
@@ -627,7 +678,12 @@ function go(tab){
   if(tab==='home')renderHome();
   if(tab==='deposit')renderDepList();
   if(tab==='charge'){checkChargeBlock();renderChargeList();}
-  if(tab==='add')checkAddBlock();
+  if(tab==='add'){
+    checkAddBlock();
+    const ld=getLastDate();
+    document.getElementById('iDate').value=ld;
+    document.getElementById('krwExpDate').value=ld;
+  }
   if(tab==='list')renderList();
   if(tab==='settle')renderSettle();
 }
@@ -637,20 +693,48 @@ function openModal(ttl,body){document.getElementById('modalTtl').textContent=ttl
 /* ──────────────────────────────
    잔액 안내 (경고 표시만 — 버튼 비활성화 없음)
 ────────────────────────────── */
+/* ── 충전탭 스위처 ── */
+let _chargeTab=0;
+function switchChargeTab(n){
+  [0,1,2,3].forEach(i=>{
+    document.getElementById('ct-'+i).classList.toggle('on',i===n);
+    document.getElementById('cp-'+i).style.display=i===n?'':'none';
+  });
+  _chargeTab=n;
+}
+
+/* ── 지출 상세 토글 ── */
+function toggleExpDetail(){
+  const f=document.getElementById('expDetailFields');
+  const a=document.getElementById('expDetailArrow');
+  const open=f.classList.toggle('open');
+  a.textContent=open?'▼':'▶';
+}
+function toggleKrwExpDetail(){
+  const f=document.getElementById('krwExpDetailFields');
+  const a=document.getElementById('krwExpDetailArrow');
+  const open=f.classList.toggle('open');
+  a.textContent=open?'▼':'▶';
+}
+
+/* ── 날짜 기억 ── */
+let _lastDate='';
+function rememberDate(d){ if(d){ _lastDate=d; } }
+function getLastDate(){ return _lastDate || new Date().toISOString().split('T')[0]; }
+
 function checkChargeBlock(){
-  const bal=acct(),noD=kDep()===0,wrap=document.getElementById('chargeFormWrap');
+  const bal=acct(),noD=kDep()===0;
   if(noD) sw('chargeBlockWarn','💡 원화 입금이 없습니다. 충전/환전 버튼을 누르면 상세 안내가 나옵니다.','warn-o');
   else if(bal<=0) sw('chargeBlockWarn',`💡 계좌 잔액 ${fK(bal)} — 충전/환전 버튼을 누르면 상세 안내가 나옵니다.`,'warn-o');
   else sw('chargeBlockWarn',null);
-  wrap.querySelectorAll('input,select').forEach(e=>e.disabled=false);
-  ['cBtn','exBtn','atmBtn'].forEach(id=>document.getElementById(id).disabled=false);
+  ['cBtn','exBtn','atmBtn','rfBtn'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
 }
 function checkAddBlock(){
-  const allE=TRIP.payMethods.every(p=>payBal(p)<=0),wrap=document.getElementById('addFormWrap');
+  const allE=TRIP.payMethods.every(p=>payBal(p)<=0);
   if(allE) sw('addBlockWarn','💡 모든 결제 수단 잔액이 없습니다. 지출 버튼을 누르면 상세 안내가 나옵니다.','warn-o');
   else sw('addBlockWarn',null);
-  wrap.querySelectorAll('input,select').forEach(e=>e.disabled=false);
-  document.getElementById('addBtn').disabled=false;
+  const btn=document.getElementById('addBtn');
+  if(btn) btn.disabled=false;
   checkPayBal();
 }
 function checkPayBal(){
@@ -714,6 +798,7 @@ function initApp(){
 
   const today=new Date().toISOString().split('T')[0];
   ['iDate','dDate','cDate','exDate','atmDate','krwExpDate','rfDate'].forEach(id=>document.getElementById(id).value=today);
+  _lastDate=today;
 
   const sym=TRIP.country.sym,code=TRIP.country.code,r100=TRIP.country.r100;
   const rl=r100?`100${code}당 원화`:`1${code}당 원화`;
@@ -1219,11 +1304,13 @@ function checkKrwExpBal(){
   document.getElementById('krwExpBtn').disabled=false;
 }
 function addKrwExp(){
-  const name=document.getElementById('krwExpName').value.trim(),amt=nv('krwExpAmt'),cat='기타',date=document.getElementById('krwExpDate').value,payer=document.getElementById('krwExpPayer').value,note=document.getElementById('krwExpNote').value.trim();
-  if(!name||!amt||!date){alert('항목명, 금액, 날짜를 입력해 주세요.');return;}
+  const date=document.getElementById('krwExpDate').value||getLastDate();
+  const name=document.getElementById('krwExpName').value.trim(),amt=nv('krwExpAmt'),cat='기타',payer=document.getElementById('krwExpPayer').value,note=document.getElementById('krwExpNote').value.trim();
+  if(!name||!amt){alert('항목명과 금액을 입력해 주세요.');return;}
   const bal=acct();
   if(amt>bal){alert(`💴 원화 지출 불가 — 계좌 잔액 부족\n\n현재 계좌 잔액: ${fK(bal)}\n결제 요청 금액: ${fK(amt)}\n부족 금액: ${fK(amt-bal)}\n\n입금 탭에서 먼저 입금해 주세요.`);return;}
   krwExps.push({id:nid++,name,amt,cat,date:mmdd(date),rawDate:date,payer,note});
+  rememberDate(date);
   ['krwExpName','krwExpAmt','krwExpNote'].forEach(id=>document.getElementById(id).value='');
   sw('krwExpWarn',null);document.getElementById('krwExpPreview').style.display='none';
   renderHome();markDirty();go('list');
@@ -1231,11 +1318,17 @@ function addKrwExp(){
 
 /* ── 외화 지출 ── */
 function addExp(){
-  const name=document.getElementById('iName').value.trim(),amt=nv('iAmt'),cat='기타',pay=document.getElementById('iPay').value,date=document.getElementById('iDate').value,payer=document.getElementById('iPayer').value,note=document.getElementById('iNote').value.trim();
-  if(!name||!amt||!date){alert('항목명, 금액, 날짜를 입력해 주세요.');return;}
+  // 상세 필드 열려있지 않으면 마지막 날짜 사용
+  const detailOpen=document.getElementById('expDetailFields').classList.contains('open');
+  const date=detailOpen?document.getElementById('iDate').value:getLastDate();
+  if(!date) document.getElementById('iDate').value=getLastDate();
+
+  const name=document.getElementById('iName').value.trim(),amt=nv('iAmt'),cat='기타',pay=document.getElementById('iPay').value,payer=document.getElementById('iPayer').value,note=document.getElementById('iNote').value.trim();
+  if(!name||!amt){alert('항목명과 금액을 입력해 주세요.');return;}
   const bal=payBal(pay);
   if(amt>bal){alert(`⚠ 지출 불가 — ${pay} 잔액 부족\n\n현재 ${pay} 잔액: ${fL(bal)}\n결제 요청 금액: ${fL(amt)}\n부족 금액: ${fL(amt-bal)}\n\n충전/환전 탭에서 먼저 충전해 주세요.`);return;}
   expenses.push({id:nid++,name,amt,cat,pay,date:mmdd(date),rawDate:date,payer,note});
+  rememberDate(date);
   ['iName','iAmt','iNote'].forEach(id=>document.getElementById(id).value='');
   sw('payWarn',null);document.getElementById('balPreview').style.display='none';
   renderHome();checkAddBlock();markDirty();go('list');
