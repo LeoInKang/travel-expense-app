@@ -924,7 +924,7 @@ function loadTrip(id){
   nid=h.nid||1;
   MCM={};MBM={};
   TRIP.members.forEach((m,i)=>{MCM[m]=MC[i%MC.length];MBM[m]=MB[i%MB.length];});
-  _screenStack=[];
+  _screenStack=['landing']; // 이전 누르면 대문으로
   document.getElementById('p-setup').style.display='none';
   initApp();
   showToast(`📂 "${TRIP.name}" 불러왔습니다`);
@@ -1005,9 +1005,10 @@ function renderHistList(){
 
 // 현재 진행 중 여행으로 돌아가기
 function resumeCurrentTrip(){
-  document.getElementById('p-setup').style.display='none';
-  document.getElementById('mainHdr').style.display='';
-  document.getElementById('mainTabs').style.display='';
+  // hist를 pop하고 app으로
+  if(_screenStack[_screenStack.length-1]==='hist') _screenStack.pop();
+  if(_screenStack[_screenStack.length-1]!=='app') _screenStack.push('app');
+  _showScreen('app');
   go('home');
 }
 
