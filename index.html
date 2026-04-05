@@ -343,6 +343,23 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
         </div>
       </div>
       <button class="btn-pri" onclick="saveTripEdit()">저장</button>
+
+      <!-- 데이터 관리 -->
+      <div class="card" style="margin-top:8px">
+        <div class="card-ttl">데이터 관리</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="btn-sec" style="width:100%;text-align:left;padding:12px 14px" onclick="exportJSON()">
+            📤 데이터 내보내기 (JSON) <span style="font-size:11px;color:var(--tx3);float:right">백업 / 기기 이전</span>
+          </button>
+          <button class="btn-sec" style="width:100%;text-align:left;padding:12px 14px" onclick="document.getElementById('importFile').click()">
+            📥 데이터 가져오기 (JSON) <span style="font-size:11px;color:var(--tx3);float:right">복원</span>
+          </button>
+          <button class="btn-sec" style="width:100%;text-align:left;padding:12px 14px" onclick="exportCSV()">
+            📊 엑셀로 내보내기 (CSV) <span style="font-size:11px;color:var(--tx3);float:right">정산서 / 기록</span>
+          </button>
+        </div>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)"/>
+      </div>
     </div>
 
     <!-- 여행 히스토리 -->
@@ -1015,8 +1032,139 @@ function saveTripEdit(){
 }
 
 /* ──────────────────────────────
-   여행 히스토리 (localStorage)
+   데이터 내보내기 / 가져오기
 ────────────────────────────── */
+function exportJSON(){
+  if(!TRIP.name){alert('진행 중인 여행이 없습니다.');return;}
+  saveCurrentTrip(true);
+  const data={
+    version:1,
+    exportedAt:new Date().toISOString(),
+    trip:TRIP,
+    deposits,charges,exchanges,atms,refunds,expenses,krwExps,nid
+  };
+  const json=JSON.stringify(data,null,2);
+  const blob=new Blob([json],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const name=TRIP.name.replace(/[^a-zA-Z0-9가-힣]/g,'_');
+  a.href=url;
+  a.download=`TripPay_${name}_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📤 JSON 파일이 저장됐습니다');
+}
+
+function importJSON(event){
+  const file=event.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      const data=JSON.parse(e.target.result);
+      if(!data.trip||!data.version){alert('올바른 TripPay 백업 파일이 아닙니다.');return;}
+      if(!confirm(`"${data.trip.name}" 여행 데이터를 불러옵니다.\n\n현재 데이터는 히스토리에 저장됩니다.\n계속하시겠습니까?`))return;
+      // 현재 여행 저장
+      if(TRIP.name) saveCurrentTrip(true);
+      // 데이터 복원
+      TRIP=data.trip;
+      deposits=data.deposits||[];
+      charges=data.charges||[];
+      exchanges=data.exchanges||[];
+      atms=data.atms||[];
+      refunds=data.refunds||[];
+      expenses=data.expenses||[];
+      krwExps=data.krwExps||[];
+      nid=data.nid||1;
+      MCM={};MBM={};
+      TRIP.members.forEach((m,i)=>{MCM[m]=MC[i%MC.length];MBM[m]=MB[i%MB.length];});
+      if(!TRIP._id) TRIP._id='trip_'+Date.now();
+      _screenStack=['landing'];
+      initApp();
+      showToast(`📥 "${TRIP.name}" 불러왔습니다`);
+    }catch(err){
+      alert('파일을 읽는 중 오류가 발생했습니다.\n올바른 JSON 파일인지 확인해 주세요.');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value=''; // 같은 파일 재선택 가능하도록
+}
+
+function exportCSV(){
+  if(!TRIP.name){alert('진행 중인 여행이 없습니다.');return;}
+  const r=avgRate();
+  const BOM='\uFEFF'; // 엑셀 한글 깨짐 방지
+  const rows=[];
+
+  // ── 여행 정보 ──
+  rows.push(['[여행 정보]']);
+  rows.push(['여행명',TRIP.name]);
+  rows.push(['기간',TRIP.startDate+' ~ '+TRIP.endDate]);
+  rows.push(['참석자',TRIP.members.join(', ')]);
+  rows.push(['국가',TRIP.country?TRIP.country.name:'']);
+  rows.push(['통화',TRIP.country?TRIP.country.code:'']);
+  rows.push([]);
+
+  // ── 입금 내역 ──
+  rows.push(['[입금 내역]']);
+  rows.push(['날짜','참석자','통화','금액','원화환산','메모']);
+  deposits.forEach(d=>{
+    rows.push([d.date,d.mem,d.cur==='KRW'?'원화':TRIP.country.code,d.amt,d.krwEquiv,d.note||'']);
+  });
+  rows.push([]);
+
+  // ── 충전/환전 내역 ──
+  rows.push(['[충전/환전 내역]']);
+  rows.push(['날짜','종류','원화','현지화','환율','메모']);
+  charges.forEach(c=>{rows.push([c.date,'카드충전',c.krw,c.local,c.rate.toFixed(2),c.note||'']);});
+  exchanges.forEach(c=>{rows.push([c.date,'현금환전',c.krw,c.local,c.rate.toFixed(2),c.note||'']);});
+  atms.forEach(a=>{rows.push([a.date,'ATM인출','',a.local,'',a.note||'']);});
+  refunds.forEach(rf=>{rows.push([rf.date,'카드잔액이전',''+rf.krw,rf.local,rf.rate||'',rf.note||'']);});
+  rows.push([]);
+
+  // ── 지출 내역 ──
+  rows.push(['[지출 내역]']);
+  rows.push(['날짜','항목','결제수단','결제자','금액(현지화)','원화환산','메모']);
+  expenses.forEach(e=>{
+    rows.push([e.date,e.name,e.pay,e.payer,e.amt,Math.round(l2k(e.amt,r)),e.note||'']);
+  });
+  krwExps.forEach(e=>{
+    rows.push([e.date,e.name,'원화직접',e.payer,'',e.amt,e.note||'']);
+  });
+  rows.push([]);
+
+  // ── 정산 요약 ──
+  rows.push(['[정산 요약]']);
+  rows.push(['참석자','납부금액(원화환산)','부담금액','차액']);
+  const breakdown={};
+  TRIP.members.forEach(m=>{breakdown[m]=0;});
+  expenses.forEach(e=>{const k=l2k(e.amt,r);if(e.payer==='공통')TRIP.members.forEach(m=>{breakdown[m]+=k/TRIP.members.length;});else if(breakdown[e.payer]!==undefined)breakdown[e.payer]+=k;});
+  krwExps.forEach(e=>{if(e.payer==='공통')TRIP.members.forEach(m=>{breakdown[m]+=e.amt/TRIP.members.length;});else if(breakdown[e.payer]!==undefined)breakdown[e.payer]+=e.amt;});
+  const totExp=TRIP.members.reduce((s,m)=>s+breakdown[m],0);
+  const perPerson=Math.round(totExp/TRIP.members.length);
+  TRIP.members.forEach(m=>{
+    const paid=deposits.filter(d=>d.mem===m).reduce((s,d)=>s+d.krwEquiv,0);
+    const share=Math.round(breakdown[m]);
+    const diff=paid-share;
+    rows.push([m,paid,share,diff>0?'+'+diff:diff]);
+  });
+
+  // CSV 변환
+  const csv=BOM+rows.map(row=>row.map(cell=>{
+    const s=String(cell??'');
+    return s.includes(',')||s.includes('"')||s.includes('\n')?`"${s.replace(/"/g,'""')}"`  :s;
+  }).join(',')).join('\n');
+
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const name=TRIP.name.replace(/[^a-zA-Z0-9가-힣]/g,'_');
+  a.href=url;
+  a.download=`TripPay_${name}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📊 CSV 파일이 저장됐습니다');
+}
 const LS_KEY='travel_expense_history';
 
 function loadHistory(){
