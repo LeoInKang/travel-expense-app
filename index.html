@@ -365,13 +365,7 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
         <div class="card-ttl">데이터 관리</div>
         <div style="display:flex;flex-direction:column;gap:8px">
           <button class="btn-sec" style="width:100%;text-align:left;padding:12px 14px" onclick="importJSON_trigger()">
-            📥 데이터 가져오기 (JSON) <span style="font-size:11px;color:var(--tx3);float:right">복원 / 기기 이전</span>
-          </button>
-          <button class="btn-sec" style="width:100%;text-align:left;padding:12px 14px" onclick="exportJSON()">
-            📤 데이터 내보내기 (JSON) <span style="font-size:11px;color:var(--tx3);float:right">백업</span>
-          </button>
-          <button class="btn-sec" style="width:100%;text-align:left;padding:12px 14px" onclick="exportCSV()">
-            📊 엑셀로 내보내기 (CSV) <span style="font-size:11px;color:var(--tx3);float:right">정산서 / 기록</span>
+            📥 여행 데이터 가져오기 (JSON) <span style="font-size:11px;color:var(--tx3);float:right">복원 / 기기 이전</span>
           </button>
         </div>
         <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)"/>
@@ -1038,7 +1032,34 @@ function saveTripEdit(){
 /* ──────────────────────────────
    데이터 내보내기 / 가져오기
 ────────────────────────────── */
-function importJSON_trigger(){
+function exportTripJSON(id){
+  const list=loadHistory();
+  const h=list.find(x=>x.id===id);
+  if(!h){alert('여행을 찾을 수 없습니다.');return;}
+  const data={version:1,exportedAt:new Date().toISOString(),...h};
+  const json=JSON.stringify(data,null,2);
+  const blob=new Blob([json],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const name=h.trip.name.replace(/[^a-zA-Z0-9가-힣]/g,'_');
+  a.href=url;a.download=`TripPay_${name}_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();URL.revokeObjectURL(url);
+  showToast(`📤 "${h.trip.name}" JSON 저장됨`);
+}
+
+function exportTripCSV(id){
+  const list=loadHistory();
+  const h=list.find(x=>x.id===id);
+  if(!h){alert('여행을 찾을 수 없습니다.');return;}
+  // 임시로 데이터 교체 후 CSV 생성
+  const _T=TRIP,_d=deposits,_c=charges,_e=exchanges,_a=atms,_r=refunds,_x=expenses,_k=krwExps;
+  TRIP=h.trip;deposits=h.deposits||[];charges=h.charges||[];exchanges=h.exchanges||[];
+  atms=h.atms||[];refunds=h.refunds||[];expenses=h.expenses||[];krwExps=h.krwExps||[];
+  _doExportCSV();
+  TRIP=_T;deposits=_d;charges=_c;exchanges=_e;atms=_a;refunds=_r;expenses=_x;krwExps=_k;
+}
+
+function exportJSON(){
   // 대문에 있으면 landingImport, 히스토리에 있으면 histImport
   const el=document.getElementById('importFileLanding');
   const el2=document.getElementById('importFile');
@@ -1078,7 +1099,7 @@ function exportJSON(){
   a.download=`TripPay_${name}_${new Date().toISOString().slice(0,10)}.json`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast('📤 JSON 파일이 저장됐습니다');
+  showToast('💾 백업 파일이 저장됐습니다');
 }
 
 function importJSON(event){
@@ -1203,7 +1224,7 @@ function _doExportCSV(){
   a.download=`TripPay_${name}_${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast('📊 CSV 파일이 저장됐습니다');
+  showToast('📊 엑셀 파일 저장됨');
 }
 const LS_KEY='travel_expense_history';
 
@@ -1336,8 +1357,10 @@ function renderHistList(){
       <div class="hist-actions">
         ${isActive
           ? `<button class="btn-load" style="background:#1D9E75" onclick="resumeCurrentTrip()">✅ 현재 여행 계속</button>`
-          : `<button class="btn-load" onclick="loadTrip('${h.id}')">📂 불러오기</button>`
+          : `<button class="btn-load" onclick="loadTrip('${h.id}')">📂 여행보기</button>`
         }
+        <button class="btn-sec" style="padding:10px 12px;font-size:12px;min-height:44px" onclick="event.stopPropagation();exportTripJSON('${h.id}')">💾 백업</button>
+        <button class="btn-sec" style="padding:10px 12px;font-size:12px;min-height:44px" onclick="event.stopPropagation();exportTripCSV('${h.id}')">📊 엑셀</button>
         <button class="btn-del-hist" onclick="event.stopPropagation();deleteTrip('${h.id}')">삭제</button>
       </div>
     </div>`;
