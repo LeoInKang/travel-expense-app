@@ -299,11 +299,12 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
       <button class="btn-lp btn-lp-sec" id="btnLandingHist" onclick="showHistFromLanding()" style="display:none">
         📋 여행 히스토리
       </button>
-      <button class="btn-lp btn-lp-sec" onclick="importJSON_trigger()" style="font-size:14px;opacity:.8">
-        📥 여행 데이터 가져오기
-      </button>
-    </div>
-    <input type="file" id="importFileLanding" accept=".json" style="display:none" onchange="importJSON(event)"/>
+      <label style="position:relative;display:block">
+        <div class="btn-lp btn-lp-sec" style="font-size:14px;opacity:.8;cursor:pointer">
+          📥 여행 데이터 가져오기
+        </div>
+        <input type="file" accept=".json" onchange="importJSON(event)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/>
+      </label>
     <div id="landingRecent" style="display:none">
       <div class="landing-recent">
         <div class="recent-hdr">최근 여행</div>
@@ -364,11 +365,12 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
       <div class="card" style="margin-top:4px">
         <div class="card-ttl">데이터 관리</div>
         <div style="display:flex;flex-direction:column;gap:8px">
-          <button class="btn-sec" style="width:100%;text-align:left;padding:12px 14px" onclick="importJSON_trigger()">
-            📥 여행 데이터 가져오기 (JSON) <span style="font-size:11px;color:var(--tx3);float:right">복원 / 기기 이전</span>
-          </button>
-        </div>
-        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importJSON(event)"/>
+          <label style="position:relative;display:block">
+            <div class="btn-sec" style="width:100%;text-align:left;padding:12px 14px;cursor:pointer">
+              📥 여행 데이터 가져오기 (JSON) <span style="font-size:11px;color:var(--tx3);float:right">복원 / 기기 이전</span>
+            </div>
+            <input type="file" accept=".json" onchange="importJSON(event)" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%"/>
+          </label>
       </div>
     </div>
 
