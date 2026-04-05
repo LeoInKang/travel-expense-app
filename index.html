@@ -89,6 +89,18 @@ if('serviceWorker' in navigator){
 }
 </script>
 <title>TripPay</title>
+<script>
+// 런타임 에러 화면 표시
+window.onerror = function(msg, src, line, col, err) {
+  var d = document.getElementById('_errBox');
+  if(!d){ d=document.createElement('div'); d.id='_errBox';
+    d.style.cssText='position:fixed;top:0;left:0;right:0;background:red;color:#fff;font-size:12px;padding:8px;z-index:99999;white-space:pre-wrap;max-height:200px;overflow:auto';
+    document.body.appendChild(d);
+  }
+  d.textContent += (msg+' ('+src.split('/').pop()+':'+line+')\n');
+  return false;
+};
+</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -1062,13 +1074,6 @@ function exportTripCSV(id){
 }
 
 function exportJSON(){
-  // 대문에 있으면 landingImport, 히스토리에 있으면 histImport
-  const el=document.getElementById('importFileLanding');
-  const el2=document.getElementById('importFile');
-  (el&&document.getElementById('p-landing').style.display!=='none'?el:el2).click();
-}
-
-function exportJSON(){
   if(!TRIP.name){
     // 히스토리에서 호출 시 — 가장 최근 여행 내보내기
     const list=loadHistory();
@@ -1305,60 +1310,51 @@ function deleteTrip(id){
 }
 
 function renderHistList(){
-  const list=loadHistory();
-  const el=document.getElementById('histList');
-
-  if(list.length===0){
-    el.innerHTML='<div class="empty-hist">저장된 여행이 없습니다</div>';
-    return;
-  }
-
-  el.innerHTML=list.map(h=>{
-    const t=h.trip;
-    const sd=t.startDate||'',ed=t.endDate||'';
-    const sm=sd?parseInt(sd.slice(5,7))+'/'+parseInt(sd.slice(8,10)):'';
-    const em=ed?parseInt(ed.slice(5,7))+'/'+parseInt(ed.slice(8,10)):'';
-    const nights=sd&&ed?Math.round((new Date(ed)-new Date(sd))/(1000*60*60*24)):0;
-    const sym=t.country?t.country.sym:'';
-    const totalExp=(h.expenses||[]).reduce((s,e)=>s+e.amt,0);
-    const totalKrwExp=(h.krwExps||[]).reduce((s,e)=>s+e.amt,0);
-    const totalDep=(h.deposits||[]).reduce((s,d)=>s+d.krwEquiv,0);
-    const expCnt=(h.expenses||[]).length+(h.krwExps||[]).length;
-    const savedDt=new Date(h.savedAt);
-    const savedStr=`${savedDt.getMonth()+1}/${savedDt.getDate()} ${String(savedDt.getHours()).padStart(2,'0')}:${String(savedDt.getMinutes()).padStart(2,'0')} 저장`;
-    const isActive=TRIP._id&&TRIP._id===t._id;
-    // 정산 요약 계산
-    const r=avgRateFromData(h);
-    const totExpKrw=totalExp>0?Math.round(totalExp*(r/100||1)):0;
-    return `<div class="hist-card${isActive?' selected':''}">
-      <div class="hist-card-title">
-        <span>${t.country?t.country.flag+' ':''}<strong>${t.name}</strong></span>
-        ${isActive?'<span style="font-size:11px;background:#E1F5EE;color:#085041;padding:2px 8px;border-radius:10px;font-weight:500">현재 진행 중</span>':''}
-      </div>
-      <div class="hist-card-sub">
-        ${sd.slice(0,4)}년 ${sm}–${em} · ${nights}박${nights+1}일<br>
-        <span style="color:var(--tx3)">${(t.members||[]).join(' · ')}${t.note?' · '+t.note:''}</span>
-      </div>
-      <div class="hist-card-stats">
-        ${totalExp>0?`<span class="hist-stat">지출 ${sym}${Math.round(totalExp).toLocaleString('ko-KR')}</span>`:''}
-        ${totalKrwExp>0?`<span class="hist-stat">원화지출 ₩${Math.round(totalKrwExp).toLocaleString('ko-KR')}</span>`:''}
-        <span class="hist-stat">입금 ₩${Math.round(totalDep).toLocaleString('ko-KR')}</span>
-        <span class="hist-stat">${expCnt}건 지출</span>
-        <span class="hist-stat" style="color:var(--tx3)">${savedStr}</span>
-      </div>
-      <div class="hist-actions">
-        ${isActive
-          ? `<button class="btn-load" style="background:#1D9E75" onclick="resumeCurrentTrip()">✅ 현재 여행 계속</button>`
-          : `<button class="btn-load" onclick="loadTrip('${h.id}')">📂 여행보기</button>`
-        }
-        <button class="btn-sec" style="padding:10px 12px;font-size:12px;min-height:44px" onclick="event.stopPropagation();exportTripJSON('${h.id}')">💾 백업</button>
-        <button class="btn-sec" style="padding:10px 12px;font-size:12px;min-height:44px" onclick="event.stopPropagation();exportTripCSV('${h.id}')">📊 엑셀</button>
-        <button class="btn-del-hist" onclick="event.stopPropagation();deleteTrip('${h.id}')">삭제</button>
-      </div>
-    </div>`;
+  var list=loadHistory();
+  var el=document.getElementById('histList');
+  if(list.length===0){el.innerHTML='<div class="empty-hist">저장된 여행이 없습니다</div>';return;}
+  el.innerHTML=list.map(function(h){
+    var t=h.trip,sd=t.startDate||'',ed=t.endDate||'';
+    var sm=sd?parseInt(sd.slice(5,7))+'/'+parseInt(sd.slice(8,10)):'';
+    var em=ed?parseInt(ed.slice(5,7))+'/'+parseInt(ed.slice(8,10)):'';
+    var nights=sd&&ed?Math.round((new Date(ed)-new Date(sd))/(1000*60*60*24)):0;
+    var sym=t.country?t.country.sym:'';
+    var totalExp=(h.expenses||[]).reduce(function(s,e){return s+e.amt;},0);
+    var totalKrwExp=(h.krwExps||[]).reduce(function(s,e){return s+e.amt;},0);
+    var totalDep=(h.deposits||[]).reduce(function(s,d){return s+d.krwEquiv;},0);
+    var expCnt=(h.expenses||[]).length+(h.krwExps||[]).length;
+    var savedDt=new Date(h.savedAt);
+    var savedStr=(savedDt.getMonth()+1)+'/'+savedDt.getDate()+' '+String(savedDt.getHours()).padStart(2,'0')+':'+String(savedDt.getMinutes()).padStart(2,'0')+' 저장';
+    var isActive=!!(TRIP._id&&TRIP._id===t._id);
+    var all=[].concat(h.charges||[]).concat(h.exchanges||[]);
+    var tk=all.reduce(function(s,c){return s+c.krw;},0);
+    var tl=all.reduce(function(s,c){return s+c.local;},0);
+    var r=tl?tk/tl*100:100;
+    var statExp=totalExp>0?'<span class="hist-stat">'+sym+Math.round(totalExp).toLocaleString('ko-KR')+'</span>':'';
+    var statKrw=totalKrwExp>0?'<span class="hist-stat">'+'\u20a9'+Math.round(totalKrwExp).toLocaleString('ko-KR')+'</span>':'';
+    var btnMain=isActive
+      ?'<button class="btn-load" style="background:#1D9E75" onclick="resumeCurrentTrip()">'+'\u2705'+' 현재 여행 계속</button>'
+      :'<button class="btn-load" onclick="loadTrip(\''+h.id+'\')">'+'\uD83D\uDCC2'+' 여행보기</button>';
+    return '<div class="hist-card'+(isActive?' selected':'')+'">'+
+      '<div class="hist-card-title">'+
+        '<span>'+(t.country?t.country.flag+' ':'')+'<strong>'+t.name+'</strong></span>'+
+        (isActive?'<span style="font-size:11px;background:#E1F5EE;color:#085041;padding:2px 8px;border-radius:10px;font-weight:500">현재 진행 중</span>':'')+
+      '</div>'+
+      '<div class="hist-card-sub">'+sd.slice(0,4)+'년 '+sm+'-'+em+' '+nights+'박'+(nights+1)+'일<br>'+
+        '<span style="color:var(--tx3)">'+(t.members||[]).join(', ')+(t.note?' '+t.note:'')+'</span>'+
+      '</div>'+
+      '<div class="hist-card-stats">'+statExp+statKrw+
+        '<span class="hist-stat">'+'\u20a9'+Math.round(totalDep).toLocaleString('ko-KR')+'</span>'+
+        '<span class="hist-stat">'+expCnt+'건</span>'+
+        '<span class="hist-stat" style="color:var(--tx3)">'+savedStr+'</span>'+
+      '</div>'+
+      '<div class="hist-actions">'+btnMain+
+        '<button class="btn-sec" style="padding:10px 12px;font-size:12px;min-height:44px" onclick="event.stopPropagation();exportTripJSON(\''+h.id+'\')">'+'💾'+' 백업</button>'+
+        '<button class="btn-sec" style="padding:10px 12px;font-size:12px;min-height:44px" onclick="event.stopPropagation();exportTripCSV(\''+h.id+'\')">'+'📊'+' 엑셀</button>'+
+        '<button class="btn-del-hist" onclick="event.stopPropagation();deleteTrip(\''+h.id+'\')">'+'삭제</button>'+
+      '</div></div>';
   }).join('');
 }
-
 // 현재 진행 중 여행으로 돌아가기
 function resumeCurrentTrip(){
   // 히스토리에서 왔으면 hist 유지, 아니면 landing만
