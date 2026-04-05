@@ -4,8 +4,38 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="여행경비">
+<link rel="apple-touch-icon" id="appIcon" href="">
+<script>
+// 아이폰 홈 화면 아이콘 동적 생성
+(function(){
+  try{
+    const c=document.createElement('canvas');
+    c.width=180;c.height=180;
+    const ctx=c.getContext('2d');
+    // 배경 (둥근 사각형)
+    const r=36;
+    ctx.beginPath();
+    ctx.moveTo(r,0);ctx.lineTo(180-r,0);ctx.quadraticCurveTo(180,0,180,r);
+    ctx.lineTo(180,180-r);ctx.quadraticCurveTo(180,180,180-r,180);
+    ctx.lineTo(r,180);ctx.quadraticCurveTo(0,180,0,180-r);
+    ctx.lineTo(0,r);ctx.quadraticCurveTo(0,0,r,0);ctx.closePath();
+    const grad=ctx.createLinearGradient(0,0,180,180);
+    grad.addColorStop(0,'#1a3a5c');grad.addColorStop(.5,'#2563a8');grad.addColorStop(1,'#378ADD');
+    ctx.fillStyle=grad;ctx.fill();
+    // 비행기 이모지
+    ctx.font='96px serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('✈️',90,90);
+    // 앱 이름
+    ctx.font='bold 22px -apple-system,sans-serif';
+    ctx.fillStyle='rgba(255,255,255,0.85)';
+    ctx.fillText('여행경비',90,148);
+    document.getElementById('appIcon').href=c.toDataURL('image/png');
+  }catch(e){}
+})();
+</script>
 <title>여행 경비 앱</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
@@ -103,6 +133,26 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
 /* 스크롤 */
 .scroll-list{max-height:320px;overflow-y:auto;-webkit-overflow-scrolling:touch}
 /* 설정 화면 */
+/* 대문 화면 */
+.landing{min-height:100vh;display:flex;flex-direction:column;background:linear-gradient(160deg,#1a3a5c 0%,#2563a8 50%,#378ADD 100%);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);overflow:hidden}
+.landing-hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 2rem 1rem;text-align:center}
+.landing-icon{font-size:80px;margin-bottom:20px;filter:drop-shadow(0 4px 20px rgba(0,0,0,0.25))}
+.landing-title{font-size:34px;font-weight:700;color:#fff;letter-spacing:-.5px;margin-bottom:8px}
+.landing-sub{font-size:15px;color:rgba(255,255,255,.7);line-height:1.6}
+.landing-actions{padding:0 1.5rem 1rem;display:flex;flex-direction:column;gap:12px;width:100%;max-width:480px;margin:0 auto}
+.btn-lp{width:100%;padding:16px;border:none;border-radius:16px;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.btn-lp:active{transform:scale(.98);opacity:.9}
+.btn-lp-pri{background:#fff;color:#1a3a5c;box-shadow:0 4px 20px rgba(0,0,0,0.2)}
+.btn-lp-sec{background:rgba(255,255,255,.15);color:#fff;border:1.5px solid rgba(255,255,255,.3)!important}
+.landing-recent{padding:0 1.5rem 0.5rem;width:100%;max-width:480px;margin:0 auto}
+.recent-hdr{font-size:11px;font-weight:600;color:rgba(255,255,255,.5);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+.recent-item{display:flex;align-items:center;gap:10px;padding:11px 14px;background:rgba(255,255,255,.1);border-radius:12px;margin-bottom:6px;cursor:pointer;border:1px solid rgba(255,255,255,.1)}
+.recent-item:active{background:rgba(255,255,255,.2)}
+.recent-flag{font-size:20px;flex-shrink:0}
+.recent-name{font-size:14px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.recent-meta{font-size:11px;color:rgba(255,255,255,.55);margin-top:2px}
+.landing-ver{text-align:center;font-size:11px;color:rgba(255,255,255,.25);padding:.75rem 0 1rem}
+/* setup-hero */
 .setup-hero{text-align:center;padding:2rem 0 1.5rem}
 .setup-hero h2{font-size:24px;font-weight:600;margin-bottom:8px}
 .setup-hero p{font-size:14px;color:var(--tx2)}
@@ -159,7 +209,8 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
     <div class="hdr-title">
       <span id="hdrTitle">여행 경비</span>
       <button class="pill pill-blue" onclick="goEditTrip()">⚙ 설정</button>
-      <button class="pill" style="background:var(--bg2);color:var(--tx2);margin-left:6px" onclick="goSetup()">📋 히스토리</button>
+      <button class="pill" style="background:var(--bg2);color:var(--tx2);margin-left:6px" onclick="goBack()">← 이전</button>
+      <button class="pill" style="background:var(--bg2);color:var(--tx2);margin-left:4px" onclick="goLanding()">🏠 대문</button>
     </div>
     <div class="hdr-sub" id="hdrSub1"></div>
     <div class="hdr-sub" id="hdrSub2"></div>
@@ -169,13 +220,37 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
     </div>
   </div>
 
+  <!-- 대문 화면 -->
+  <div id="p-landing" class="landing" style="display:none">
+    <div class="landing-hero">
+      <div class="landing-icon">✈️</div>
+      <div class="landing-title">여행 경비</div>
+      <div class="landing-sub">여행 경비를 쉽고 정확하게<br>입금·충전·지출·정산 한 번에</div>
+    </div>
+    <div class="landing-actions">
+      <button class="btn-lp btn-lp-pri" onclick="showNewTrip()">
+        ✈️ 새로운 여행 시작
+      </button>
+      <button class="btn-lp btn-lp-sec" id="btnLandingHist" onclick="showHistFromLanding()" style="display:none">
+        📋 여행 히스토리
+      </button>
+    </div>
+    <div id="landingRecent" style="display:none">
+      <div class="landing-recent">
+        <div class="recent-hdr">최근 여행</div>
+        <div id="recentList"></div>
+      </div>
+    </div>
+    <div class="landing-ver">여행 경비 앱 v1.0</div>
+  </div>
+
   <!-- 설정 -->
   <div id="p-setup">
     <!-- 현재 여행 정보 수정 (앱 실행 중일 때만 표시) -->
     <div id="editTripSection" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="font-size:17px;font-weight:500">여행 정보 수정</div>
-        <button class="pill" style="background:var(--bg2);color:var(--tx2)" onclick="goBack()">← 돌아가기</button>
+        <button class="pill" style="background:var(--bg2);color:var(--tx2)" onclick="goBack()">← 이전</button>
       </div>
       <div class="card">
         <div class="card-ttl">기본 정보</div>
@@ -208,7 +283,10 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
     <!-- 여행 히스토리 -->
     <div id="histSection">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div style="font-size:17px;font-weight:500">여행 히스토리</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="btn-sec" onclick="goBack()">← 이전</button>
+          <div style="font-size:17px;font-weight:500">여행 히스토리</div>
+        </div>
         <button class="pill pill-blue" onclick="showNewTrip()">+ 새 여행</button>
       </div>
       <div id="histList"></div>
@@ -216,8 +294,7 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
 
     <!-- 새 여행 설정 (히스토리가 없거나 새 여행 클릭 시) -->
     <div id="newTripSection" style="display:none">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
-        <button class="btn-sec" id="backToHistBtn" onclick="showHist()" style="display:none">← 히스토리</button>
+      <div style="margin-bottom:14px">
         <div style="font-size:17px;font-weight:500">새 여행 설정</div>
       </div>
       <div class="step-indicator"><div class="step-dot on" id="sd0"></div><div class="step-dot" id="sd1"></div><div class="step-dot" id="sd2"></div><div class="step-dot" id="sd3"></div></div>
@@ -228,7 +305,10 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
           <div class="fr2"><div class="fg"><label>출발일</label><input type="date" id="s_startDate"/></div><div class="fg"><label>귀국일</label><input type="date" id="s_endDate"/></div></div>
           <div class="fg" style="margin-bottom:0"><label>메모 (선택)</label><input type="text" id="s_tripNote" placeholder="예: 야마구치현 · 산요CC" autocomplete="off"/></div>
         </div>
-        <button class="btn-pri" onclick="nextStep(1)">다음 →</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn-sec" id="backToHistBtn" onclick="goNewTripBack()" style="flex:1">← 이전</button>
+          <button class="btn-pri" style="margin-top:0;flex:1" onclick="nextStep(1)">다음 →</button>
+        </div>
       </div>
       <div id="step1" style="display:none">
         <div class="card">
@@ -241,7 +321,7 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
           </div>
           <div id="selectedCountryInfo" style="margin-top:12px;padding:10px 12px;background:var(--bg2);border-radius:var(--rmd);font-size:13px;display:none"></div>
         </div>
-        <div style="display:flex;gap:8px"><button class="btn-sec" style="flex:1" onclick="nextStep(0)">← 이전</button><button class="btn-pri" style="margin-top:0;flex:2" onclick="nextStep(2)">다음 →</button></div>
+        <div style="display:flex;gap:8px"><button class="btn-sec" style="flex:1" onclick="nextStep(0)">← 이전</button><button class="btn-pri" style="margin-top:0;flex:1" onclick="nextStep(2)">다음 →</button></div>
       </div>
       <div id="step2" style="display:none">
         <div class="card">
@@ -251,7 +331,7 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
             <div style="display:flex;gap:8px"><input type="text" id="s_newPay" placeholder="결제 수단 추가…" autocomplete="off" style="flex:1;font-size:16px;padding:10px;border:.5px solid var(--bd2);border-radius:var(--rmd);background:var(--bg2);color:var(--tx1);outline:none;min-height:44px"/><button class="btn-sec" onclick="addPayMethod()">추가</button></div>
           </div>
         </div>
-        <div style="display:flex;gap:8px"><button class="btn-sec" style="flex:1" onclick="nextStep(1)">← 이전</button><button class="btn-pri" style="margin-top:0;flex:2" onclick="nextStep(3)">다음 →</button></div>
+        <div style="display:flex;gap:8px"><button class="btn-sec" style="flex:1" onclick="nextStep(1)">← 이전</button><button class="btn-pri" style="margin-top:0;flex:1" onclick="nextStep(3)">다음 →</button></div>
       </div>
       <div id="step3" style="display:none">
         <div class="card">
@@ -263,7 +343,7 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
             <select id="s_splitMode" style="font-size:16px;padding:10px;border:.5px solid var(--bd2);border-radius:var(--rmd);background:var(--bg2);color:var(--tx1);outline:none;width:100%;min-height:44px"><option value="equal">균등 배분 (인원수로 나누기)</option><option value="custom">결제자 기준 배분</option></select>
           </div>
         </div>
-        <div style="display:flex;gap:8px"><button class="btn-sec" style="flex:1" onclick="nextStep(2)">← 이전</button><button class="btn-pri" style="margin-top:0;flex:2" onclick="startApp()">앱 시작</button></div>
+        <div style="display:flex;gap:8px"><button class="btn-sec" style="flex:1" onclick="nextStep(2)">← 이전</button><button class="btn-pri" style="margin-top:0;flex:1" onclick="startApp()">앱 시작</button></div>
       </div>
     </div>
   </div>
@@ -645,29 +725,18 @@ function initApp(){
   document.getElementById('p-setup').style.display='none';
   document.getElementById('mainTabs').style.display='';
   hideSaveBanner();
-  // 앱 최초 시작 시 자동저장 (히스토리에 추가)
   if(!TRIP._id) TRIP._id='trip_'+Date.now();
   saveCurrentTrip(true);
+  _navigate('app');
   go('home');
 }
 function goSetup(){
   if(TRIP.name) saveCurrentTrip(true);
-  document.getElementById('mainHdr').style.display='none';
-  document.getElementById('mainTabs').style.display='none';
-  document.getElementById('p-setup').style.display='';
-  document.getElementById('editTripSection').style.display='none';
-  renderHistList();
+  _navigate('hist');
 }
 function goEditTrip(){
-  // 현재 여행 저장 후 수정 화면으로
   if(TRIP.name) saveCurrentTrip(true);
-  document.getElementById('mainHdr').style.display='none';
-  document.getElementById('mainTabs').style.display='none';
-  document.getElementById('p-setup').style.display='';
-  document.getElementById('histSection').style.display='none';
-  document.getElementById('newTripSection').style.display='none';
-  document.getElementById('editTripSection').style.display='';
-  // 현재 값 채우기
+  _navigate('editTrip');
   document.getElementById('et_name').value=TRIP.name||'';
   document.getElementById('et_start').value=TRIP.startDate||'';
   document.getElementById('et_end').value=TRIP.endDate||'';
@@ -675,11 +744,51 @@ function goEditTrip(){
   etRenderChips();
   etRenderPayList();
 }
+/* ── 화면 이동 스택 ── */
+let _screenStack=[];  // 'landing' | 'hist' | 'newTrip' | 'editTrip' | 'app'
+
+function _showScreen(name){
+  // 모든 화면 숨김
+  ['p-landing','p-setup','mainHdr','mainTabs'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display='none';
+  });
+  ['editTripSection','histSection','newTripSection'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display='none';
+  });
+
+  if(name==='landing'){
+    document.getElementById('p-landing').style.display='flex';
+  } else if(name==='hist'){
+    document.getElementById('p-setup').style.display='';
+    document.getElementById('histSection').style.display='';
+    renderHistList();
+  } else if(name==='newTrip'){
+    document.getElementById('p-setup').style.display='';
+    document.getElementById('newTripSection').style.display='';
+    // 현재 step 복원
+    [0,1,2,3].forEach(i=>document.getElementById('step'+i).style.display=i===step?'':'none');
+    [0,1,2,3].forEach(i=>document.getElementById('sd'+i).className='step-dot'+(i<=step?' on':''));
+  } else if(name==='editTrip'){
+    document.getElementById('p-setup').style.display='';
+    document.getElementById('editTripSection').style.display='';
+  } else if(name==='app'){
+    document.getElementById('mainHdr').style.display='';
+    document.getElementById('mainTabs').style.display='';
+  }
+}
+
+function _navigate(name){
+  _screenStack.push(name);
+  _showScreen(name);
+}
+
 function goBack(){
-  document.getElementById('editTripSection').style.display='none';
-  document.getElementById('mainHdr').style.display='';
-  document.getElementById('mainTabs').style.display='';
-  go('home');
+  if(_screenStack.length > 1) _screenStack.pop();
+  const prev=_screenStack[_screenStack.length-1]||'landing';
+  _showScreen(prev);
+  if(prev==='app') go('home');
 }
 // 수정용 임시 참석자/결제수단 (TRIP 직접 편집)
 function etRenderChips(){
@@ -748,6 +857,7 @@ function saveTripEdit(){
   document.getElementById('krwExpPayer').innerHTML='<option value="공통">공통(균등)</option>'+TRIP.members.map(m=>`<option value="${m}">${m}</option>`).join('');
   document.getElementById('iPay').innerHTML=TRIP.payMethods.map(p=>`<option>${p}</option>`).join('');
   document.getElementById('fPay').innerHTML='<option value="">결제수단</option>'+TRIP.payMethods.map(p=>`<option>${p}</option>`).join('');
+  _navigate('app');
   go('home');
   showToast('✅ 여행 정보가 수정됐습니다');
 }
@@ -813,6 +923,7 @@ function loadTrip(id){
   nid=h.nid||1;
   MCM={};MBM={};
   TRIP.members.forEach((m,i)=>{MCM[m]=MC[i%MC.length];MBM[m]=MB[i%MB.length];});
+  _screenStack=[];
   document.getElementById('p-setup').style.display='none';
   initApp();
   showToast(`📂 "${TRIP.name}" 불러왔습니다`);
@@ -837,7 +948,7 @@ function renderHistList(){
     // 히스토리 없으면 바로 새 여행 화면
     histSec.style.display='none';
     newSec.style.display='';
-    document.getElementById('backToHistBtn').style.display='none';
+    
     [0,1,2,3].forEach(i=>document.getElementById('step'+i).style.display=i===step?'':'none');
     return;
   }
@@ -907,11 +1018,9 @@ function avgRateFromData(h){
   return tl?tk/tl*100:100;
 }
 
+function goNewTripBack(){ goBack(); }
 function showNewTrip(){
-  document.getElementById('histSection').style.display='none';
-  document.getElementById('newTripSection').style.display='';
-  document.getElementById('backToHistBtn').style.display='';
-  // 폼 초기화
+  _navigate('newTrip');
   step=0;
   [0,1,2,3].forEach(i=>document.getElementById('step'+i).style.display=i===0?'':'none');
   [0,1,2,3].forEach(i=>document.getElementById('sd'+i).className='step-dot'+(i===0?' on':''));
@@ -1293,18 +1402,46 @@ function renderSettle(){
   document.getElementById('s-note').textContent=totExp===0?'지출을 입력하면 정산 결과가 계산됩니다.':`총 지출 ${fK(totExp)} · 인당(팀당) ${fK(perPerson)}`;
 }
 
+function goLanding(){
+  if(TRIP.name) saveCurrentTrip(true);
+  _screenStack=[];
+  _navigate('landing');
+}
+function hideLanding(){}
+function showHistFromLanding(){ _navigate('hist'); }
+function loadTripFromLanding(id){ loadTrip(id); }
+
 renderCountryGrid();
-// 초기 화면: 히스토리가 있으면 히스토리 목록, 없으면 바로 새 여행 설정
+// 초기 화면: 대문 항상 표시, 최근 여행 리스트업
 (function(){
   const list=loadHistory();
+  _screenStack=[];
+  _navigate('landing');
+
   if(list.length>0){
-    document.getElementById('histSection').style.display='';
-    document.getElementById('newTripSection').style.display='none';
-    renderHistList();
-  } else {
-    document.getElementById('histSection').style.display='none';
-    document.getElementById('newTripSection').style.display='';
-    document.getElementById('backToHistBtn').style.display='none';
+    document.getElementById('landingRecent').style.display='';
+    document.getElementById('btnLandingHist').style.display='';
+    const recent=list.slice(0,3);
+    document.getElementById('recentList').innerHTML=recent.map(h=>{
+      const t=h.trip;
+      const sd=t.startDate||'',ed=t.endDate||'';
+      const sm=sd?parseInt(sd.slice(5,7))+'/'+parseInt(sd.slice(8,10)):'';
+      const em=ed?parseInt(ed.slice(5,7))+'/'+parseInt(ed.slice(8,10)):'';
+      const nights=sd&&ed?Math.round((new Date(ed)-new Date(sd))/(1000*60*60*24)):0;
+      const totalExp=(h.expenses||[]).reduce((s,e)=>s+e.amt,0);
+      const sym=t.country?t.country.sym:'';
+      return `<div class="recent-item" onclick="loadTripFromLanding('${h.id}')">
+        <div class="recent-flag">${t.country?t.country.flag:'🌏'}</div>
+        <div style="flex:1;min-width:0">
+          <div class="recent-name">${t.name}</div>
+          <div class="recent-meta">${sd.slice(0,4)}년 ${sm}–${em} · ${nights}박${nights+1}일 · ${(t.members||[]).join(', ')}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:12px;color:rgba(255,255,255,.8);font-weight:500">${sym}${Math.round(totalExp).toLocaleString('ko-KR')}</div>
+          <div style="font-size:10px;color:rgba(255,255,255,.45);margin-top:1px">→</div>
+        </div>
+      </div>`;
+    }).join('');
   }
 })();
 </script>
