@@ -1110,33 +1110,33 @@ function importJSON(event){
   const reader=new FileReader();
   reader.onload=function(e){
     try{
-      const data=JSON.parse(e.target.result);
-      if(!data.trip||!data.version){alert('올바른 TripPay 백업 파일이 아닙니다.');return;}
-      if(!confirm(`"${data.trip.name}" 여행 데이터를 불러옵니다.\n\n현재 데이터는 히스토리에 저장됩니다.\n계속하시겠습니까?`))return;
-      // 현재 여행 저장
+      const raw=JSON.parse(e.target.result);
+      if(!raw.trip||!raw.version){alert('올바른 TripPay 백업 파일이 아닙니다.');return;}
+      if(!confirm(`"${raw.trip.name}" 여행 데이터를 불러옵니다.\n계속하시겠습니까?`))return;
       if(TRIP.name) saveCurrentTrip(true);
-      // 데이터 복원
-      TRIP=data.trip;
-      deposits=data.deposits||[];
-      charges=data.charges||[];
-      exchanges=data.exchanges||[];
-      atms=data.atms||[];
-      refunds=data.refunds||[];
-      expenses=data.expenses||[];
-      krwExps=data.krwExps||[];
-      nid=data.nid||1;
+      TRIP=JSON.parse(JSON.stringify(raw.trip));
+      deposits=JSON.parse(JSON.stringify(raw.deposits||[]));
+      charges=JSON.parse(JSON.stringify(raw.charges||[]));
+      exchanges=JSON.parse(JSON.stringify(raw.exchanges||[]));
+      atms=JSON.parse(JSON.stringify(raw.atms||[]));
+      refunds=JSON.parse(JSON.stringify(raw.refunds||[]));
+      expenses=JSON.parse(JSON.stringify(raw.expenses||[]));
+      krwExps=JSON.parse(JSON.stringify(raw.krwExps||[]));
+      nid=raw.nid||1;
       MCM={};MBM={};
       TRIP.members.forEach((m,i)=>{MCM[m]=MC[i%MC.length];MBM[m]=MB[i%MB.length];});
       if(!TRIP._id) TRIP._id='trip_'+Date.now();
+      saveCurrentTrip(true); // 히스토리에 저장
       _screenStack=['landing'];
       initApp();
       showToast(`📥 "${TRIP.name}" 불러왔습니다`);
     }catch(err){
+      console.error(err);
       alert('파일을 읽는 중 오류가 발생했습니다.\n올바른 JSON 파일인지 확인해 주세요.');
     }
   };
   reader.readAsText(file);
-  event.target.value=''; // 같은 파일 재선택 가능하도록
+  event.target.value='';
 }
 
 function exportCSV(){
