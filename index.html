@@ -159,6 +159,7 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
     <div class="hdr-title">
       <span id="hdrTitle">여행 경비</span>
       <button class="pill pill-blue" onclick="goEditTrip()">⚙ 설정</button>
+      <button class="pill" style="background:var(--bg2);color:var(--tx2);margin-left:6px" onclick="goSetup()">📋 히스토리</button>
     </div>
     <div class="hdr-sub" id="hdrSub1"></div>
     <div class="hdr-sub" id="hdrSub2"></div>
@@ -174,10 +175,7 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
     <div id="editTripSection" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <div style="font-size:17px;font-weight:500">여행 정보 수정</div>
-        <div style="display:flex;gap:8px">
-          <button class="pill pill-blue" onclick="goSetup()">📋 히스토리</button>
-          <button class="pill" style="background:var(--bg2);color:var(--tx2)" onclick="goBack()">← 돌아가기</button>
-        </div>
+        <button class="pill" style="background:var(--bg2);color:var(--tx2)" onclick="goBack()">← 돌아가기</button>
       </div>
       <div class="card">
         <div class="card-ttl">기본 정보</div>
