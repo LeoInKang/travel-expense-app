@@ -1209,7 +1209,7 @@ function _doExportCSV(){
   const breakdown={};
   TRIP.members.forEach(m=>{breakdown[m]=0;});
   expenses.forEach(e=>{const k=l2k(e.amt,r);if(e.payer==='공통')TRIP.members.forEach(m=>{breakdown[m]+=k/TRIP.members.length;});else if(breakdown[e.payer]!==undefined)breakdown[e.payer]+=k;});
-  krwExps.forEach(e=>{if(e.payer==='공통')TRIP.members.forEach(m=>{breakdown[m]+=e.amt/TRIP.members.length;});else if(breakdown[e.payer]!==undefined)breakdown[e.payer]+=e.amt;});
+  krwExps.forEach(e=>{TRIP.members.forEach(m=>{breakdown[m]+=e.amt/TRIP.members.length;});});
   const totExp=TRIP.members.reduce((s,m)=>s+breakdown[m],0);
   const perPerson=Math.round(totExp/TRIP.members.length);
   TRIP.members.forEach(m=>{
@@ -1780,15 +1780,21 @@ function renderSettle(){
     else if(breakdown[e.payer]!==undefined) breakdown[e.payer]+=k;
   });
   krwExps.forEach(e=>{
-    if(e.payer==='공통') mems.forEach(m=>{breakdown[m]+=e.amt/mems.length;});
-    else if(breakdown[e.payer]!==undefined) breakdown[e.payer]+=e.amt;
+    // 원화지출은 결제자 관계없이 항상 균등배분 (공금에서 공동비용 처리)
+    mems.forEach(m=>{breakdown[m]+=e.amt/mems.length;});
   });
   const totExp=mems.reduce((s,m)=>s+breakdown[m],0);
   const perPerson=mems.length>0?Math.round(totExp/mems.length):0;
 
-  // ── 잔액 현황 ──
-  const totalRemain=Math.round(acct()+l2k(cashBal()+cardBal(),r));
-  const remainPerPerson=mems.length>0?Math.round(totalRemain/mems.length):0;
+  // ── 잔액 각각 계산 ──
+  const acctBal = Math.round(acct());
+  const cardBalAmt = Math.round(cardBal());
+  const cashBalAmt = Math.round(cashBal());
+  const acctPerPerson = acctBal > 0 ? Math.round(acctBal / mems.length) : 0;
+  const cardPerPerson = cardBalAmt > 0 ? Math.round(l2k(cardBalAmt, r) / mems.length) : 0;
+  const cashPerPerson = cashBalAmt > 0 ? Math.round(l2k(cashBalAmt, r) / mems.length) : 0;
+  const totalRemain = acctBal + Math.round(l2k(cardBalAmt,r)) + Math.round(l2k(cashBalAmt,r));
+  const refundPerPerson = acctPerPerson + cardPerPerson + cashPerPerson;
 
   // ── 요약 카드 ──
   document.getElementById('s-summary').innerHTML=`
@@ -1801,39 +1807,40 @@ function renderSettle(){
         <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">총 지출 (원화환산)</div>
         <div style="font-size:18px;font-weight:700;color:#E24B4A">${fK(totExp)}</div>
       </div>
-      <div style="background:var(--bg2);border-radius:var(--rmd);padding:12px">
-        <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">남은 금액 (원화환산)</div>
-        <div style="font-size:18px;font-weight:700;color:${totalRemain>=0?'#1D9E75':'#E24B4A'}">${fK(totalRemain)}</div>
-        <div style="font-size:10px;color:var(--tx3);margin-top:2px">계좌+카드+현금</div>
-      </div>
-      <div style="background:var(--bg2);border-radius:var(--rmd);padding:12px">
-        <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">인당 부담액</div>
-        <div style="font-size:18px;font-weight:700">${fK(perPerson)}</div>
-        <div style="font-size:10px;color:var(--tx3);margin-top:2px">${mems.length}명 균등</div>
-      </div>
+      ${acctBal>0?`<div style="background:var(--bg2);border-radius:var(--rmd);padding:12px">
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">계좌 잔액</div>
+        <div style="font-size:18px;font-weight:700;color:#1D9E75">${fK(acctBal)}</div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:2px">인당 ${fK(acctPerPerson)}</div>
+      </div>`:''}
+      ${cardBalAmt>0?`<div style="background:var(--bg2);border-radius:var(--rmd);padding:12px">
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">${TRIP.payMethods[0]||'카드'} 잔액</div>
+        <div style="font-size:18px;font-weight:700;color:#1D9E75">${fL(cardBalAmt)}</div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:2px">인당 ${fL(Math.round(cardBalAmt/mems.length))}</div>
+      </div>`:''}
+      ${cashBalAmt>0?`<div style="background:var(--bg2);border-radius:var(--rmd);padding:12px">
+        <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">현금 잔액</div>
+        <div style="font-size:18px;font-weight:700;color:#1D9E75">${fL(cashBalAmt)}</div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:2px">인당 ${fL(Math.round(cashBalAmt/mems.length))}</div>
+      </div>`:''}
     </div>`;
 
   // ── 참석자별 정산 결과 ──
-  // diff > 0: 돌려받아야 함 / diff < 0: 더 내야 함
   document.getElementById('s-result').innerHTML=mems.map(m=>{
-    const p=Math.round(paid[m]);
-    const share=Math.round(breakdown[m]);
-    const diff=p-share; // 납부 - 부담 = 남는돈(+) or 부족(-)
-    const returnAmt=remainPerPerson; // 잔액 정산 시 인당 돌려받을 금액
+    // 각 잔액 항목별 인당 환급 상세
+    const lines = [];
+    if(acctBal>0) lines.push(`계좌 ${fK(acctPerPerson)}`);
+    if(cardBalAmt>0) lines.push(`${TRIP.payMethods[0]||'카드'} ${fL(Math.round(cardBalAmt/mems.length))}`);
+    if(cashBalAmt>0) lines.push(`현금 ${fL(Math.round(cashBalAmt/mems.length))}`);
 
-    let badge='', desc='';
+    let badge='', desc=lines.join(' + ');
     if(totExp===0){
       badge=`<span class="settle-pill" style="background:#E6F1FB;color:#0C447C">지출 없음</span>`;
       desc='지출을 입력하면 정산됩니다';
-    } else if(diff>500){
-      badge=`<span class="settle-pill" style="background:#E1F5EE;color:#085041;font-size:13px;padding:6px 12px">💚 ${fK(diff)} 돌려받기</span>`;
-      desc=`납부 ${fK(p)} · 부담 ${fK(share)}`;
-    } else if(diff<-500){
-      badge=`<span class="settle-pill" style="background:#FCEBEB;color:#791F1F;font-size:13px;padding:6px 12px">🔴 ${fK(Math.abs(diff))} 추가납부</span>`;
-      desc=`납부 ${fK(p)} · 부담 ${fK(share)}`;
+    } else if(refundPerPerson>0){
+      badge=`<span class="settle-pill" style="background:#E1F5EE;color:#085041;font-size:13px;padding:6px 12px">💚 ${fK(refundPerPerson)} 돌려받기</span>`;
     } else {
-      badge=`<span class="settle-pill" style="background:#E6F1FB;color:#0C447C;font-size:13px;padding:6px 12px">✅ 정산 완료</span>`;
-      desc=`납부 ${fK(p)} · 부담 ${fK(share)}`;
+      badge=`<span class="settle-pill" style="background:#E6F1FB;color:#0C447C;font-size:13px;padding:6px 12px">✅ 잔액 없음</span>`;
+      desc='잔액이 없어 환급 없음';
     }
 
     return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:.5px solid var(--bd3)">
@@ -1848,7 +1855,7 @@ function renderSettle(){
 
   document.getElementById('s-note').textContent=totExp===0
     ?'지출을 입력하면 정산 결과가 계산됩니다.'
-    :`총 지출 ${fK(totExp)} · 인당 부담 ${fK(perPerson)}${remainPerPerson>0?' · 인당 잔액 환급 '+fK(remainPerPerson):''}`;
+    :`총 입금 ${fK(totalPaid)} · 총 지출 ${fK(totExp)} · 인당 환급 ${fK(refundPerPerson)}`;
 
   // ── 상세 내역 (접힌 상태) ──
   document.getElementById('s-dep-detail').innerHTML=mems.map(m=>{
