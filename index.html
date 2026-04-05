@@ -302,7 +302,7 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
     <div class="landing-hero">
       <div class="landing-icon">✈️</div>
       <div class="landing-title">Trip<span style="opacity:.85">Pay</span></div>
-      <div class="landing-sub">여행 경비를 스마트하게<br>입금 · 충전 · 지출 · 정산 한 번에</div>
+      <div class="landing-sub">회비 납부부터 지출·정산까지<br>단체 여행 공금 관리 한 번에</div>
     </div>
     <div class="landing-actions">
       <button class="btn-lp btn-lp-pri" onclick="showNewTrip()">
@@ -464,15 +464,15 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
       </div>
     </div>
 
-    <!-- 입금 -->
+    <!-- 회비 -->
     <div id="p-deposit" style="display:none">
       <div class="info-box" id="depositInfoBox"></div>
       <div class="card">
-        <div class="card-ttl">입금 등록</div>
+        <div class="card-ttl">회비 납부</div>
         <div class="fr3">
           <div class="fg"><label>참석자</label><select id="dMem" style="min-height:44px"></select></div>
           <div class="fg"><label>통화</label><select id="dCur" onchange="onDepCurChange()" style="min-height:44px"><option value="KRW">원화(₩)</option><option value="LOCAL">외화</option></select></div>
-          <div class="fg"><label id="dAmtLbl">입금액(원)</label><input type="text" id="dAmt" placeholder="0" inputmode="numeric" oninput="fmtInput(this);calcDepLocal()"/></div>
+          <div class="fg"><label id="dAmtLbl">회비(원)</label><input type="text" id="dAmt" placeholder="0" inputmode="numeric" oninput="fmtInput(this);calcDepLocal()"/></div>
         </div>
         <div class="fr2">
           <div class="fg"><label>날짜</label><input type="date" id="dDate"/></div>
@@ -485,9 +485,9 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
             <div class="fg"><label>원화환산(자동)</label><input type="text" id="dLocalKrw" placeholder="자동" readonly style="background:var(--bg3)"/></div>
           </div>
         </div>
-        <button class="btn-pri" onclick="addDeposit()">+ 입금</button>
+        <button class="btn-pri" onclick="addDeposit()">+ 회비납부</button>
       </div>
-      <div class="card"><div class="card-ttl">입금 내역</div><div id="depList"><div style="text-align:center;padding:1.5rem;color:var(--tx3);font-size:13px">없습니다</div></div></div>
+      <div class="card"><div class="card-ttl">회비 납부내역</div><div id="depList"><div style="text-align:center;padding:1.5rem;color:var(--tx3);font-size:13px">없습니다</div></div></div>
     </div>
 
     <!-- 충전/환전 -->
@@ -658,7 +658,7 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
       <!-- 상세 내역 토글 -->
       <div id="s-detail-toggle" style="text-align:center;padding:4px 0 12px;cursor:pointer;font-size:13px;color:var(--tx3)" onclick="toggleSettleDetail()">▼ 상세 내역 보기</div>
       <div id="s-detail" style="display:none">
-        <div class="card"><div class="card-ttl">입금 내역</div><div id="s-dep-detail"></div></div>
+        <div class="card"><div class="card-ttl">회비 납부내역</div><div id="s-dep-detail"></div></div>
         <div class="card"><div class="card-ttl">자금 흐름</div><div id="s-flow"></div></div>
         <div class="card"><div class="card-ttl">지출 배분</div><div id="s-breakdown"></div></div>
       </div>
@@ -695,7 +695,7 @@ const COUNTRIES=[
 const DRATE={JPY:930,USD:1350,EUR:1470,THB:37,VND:5.3,TWD:42,SGD:1010,HKD:173,CNY:186};
 const TABS=[
   {id:'home',  icon:'🏠',label:'현황'},
-  {id:'deposit',icon:'💰',label:'입금'},
+  {id:'deposit',icon:'💰',label:'회비'},
   {id:'charge',icon:'💳',label:'충전/환전'},
   {id:'add',   icon:'➕',label:'지출'},
   {id:'list',  icon:'📋',label:'내역'},
@@ -806,7 +806,7 @@ function getLastDate(){ return _lastDate || new Date().toISOString().split('T')[
 
 function checkChargeBlock(){
   const bal=acct(),noD=kDep()===0;
-  if(noD) sw('chargeBlockWarn','💡 원화 입금이 없습니다. 충전/환전 버튼을 누르면 상세 안내가 나옵니다.','warn-o');
+  if(noD) sw('chargeBlockWarn','💡 원화 회비이 없습니다. 충전/환전 버튼을 누르면 상세 안내가 나옵니다.','warn-o');
   else if(bal<=0) sw('chargeBlockWarn',`💡 계좌 잔액 ${fK(bal)} — 충전/환전 버튼을 누르면 상세 안내가 나옵니다.`,'warn-o');
   else sw('chargeBlockWarn',null);
   ['cBtn','exBtn','atmBtn','rfBtn'].forEach(id=>{const el=document.getElementById(id);if(el)el.disabled=false;});
@@ -897,11 +897,11 @@ function initApp(){
   document.getElementById('tw-lbl').textContent=`${TRIP.payMethods[0]||'카드'} 잔액`;
   document.getElementById('tot-lbl').textContent=`총 지출(${code})`;
   document.getElementById('iAmtLbl').textContent=`금액(${sym})`;
-  document.getElementById('depositInfoBox').innerHTML=`원화 입금 → 계좌에 쌓여 충전/환전 사용<br>외화(${code}) 입금 → 현금 잔액에 직접 추가`;
+  document.getElementById('depositInfoBox').innerHTML=`원화 회비 → 계좌에 쌓여 충전/환전 사용<br>외화(${code}) 입금 → 현금 잔액에 직접 추가`;
   document.getElementById('rateBoxDep').textContent=`환율: ${rl}`;
   // 입금 통화 옵션 텍스트를 화폐단위 포함으로 업데이트
   document.getElementById('dCur').options[1].text=`외화(${code})`;
-  document.getElementById('dAmtLbl').textContent='입금액(원)';
+  document.getElementById('dAmtLbl').textContent='회비(원)';
 
   document.getElementById('p-setup').style.display='none';
   document.getElementById('mainTabs').style.display='';
@@ -1175,8 +1175,8 @@ function _doExportCSV(){
   rows.push(['통화',TRIP.country?TRIP.country.code:'']);
   rows.push([]);
 
-  // ── 입금 내역 ──
-  rows.push(['[입금 내역]']);
+  // ── 회비 납부내역 ──
+  rows.push(['[회비 납부내역]']);
   rows.push(['날짜','참석자','통화','금액','원화환산','메모']);
   deposits.forEach(d=>{
     rows.push([d.date,d.mem,d.cur==='KRW'?'원화':TRIP.country.code,d.amt,d.krwEquiv,d.note||'']);
@@ -1420,9 +1420,9 @@ function showToast(msg){
 function markDirty(){if(TRIP.name) showSaveBanner();}
 
 /* ──────────────────────────────
-   입금
+   회비
 ────────────────────────────── */
-function onDepCurChange(){const c=document.getElementById('dCur').value;document.getElementById('dAmtLbl').textContent=c==='KRW'?'입금액(원)':`입금액(${TRIP.country.sym})`;document.getElementById('dLocalRateRow').style.display=c==='LOCAL'?'':'none';}
+function onDepCurChange(){const c=document.getElementById('dCur').value;document.getElementById('dAmtLbl').textContent=c==='KRW'?'회비(원)':`회비금액(${TRIP.country.sym})`;document.getElementById('dLocalRateRow').style.display=c==='LOCAL'?'':'none';}
 function calcDepLocal(){const l=nv('dAmt'),r=parseFloat(document.getElementById('dLocalRate').value)||0;if(l>0&&r>0)sf('dLocalKrw',l2k(l,r));else document.getElementById('dLocalKrw').value='';}
 function addDeposit(){
   const mem=document.getElementById('dMem').value,cur=document.getElementById('dCur').value,amt=nv('dAmt'),date=document.getElementById('dDate').value,note=document.getElementById('dNote').value.trim();
@@ -1682,7 +1682,7 @@ function renderHome(){
   el.innerHTML=sortedDates.map(d=>{
     const rows=grouped[d].map(item=>{
       const o=item.obj;
-      if(item.type==='dep'){const isL=o.cur==='LOCAL';return `<div class="feed-row"><div class="feed-icon" style="background:#E1F5EE">💰</div><div style="flex:1;min-width:0"><div style="font-size:13px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">${o.mem} 입금 <span class="${isL?'jpy-b':'krw-b'}">${isL?TRIP.country.code:'KRW'}</span></div><div style="font-size:11px;color:var(--tx3);margin-top:1px">${isL?'현지화 입금':'계좌 입금'}${o.note?' · '+o.note:''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:500;color:#1D9E75">${isL?fL(o.amt):fK(o.amt)}</div>${isL?`<div style="font-size:10px;color:var(--tx3)">≈${fK(o.krwEquiv)}</div>`:''}</div></div>`;}
+      if(item.type==='dep'){const isL=o.cur==='LOCAL';return `<div class="feed-row"><div class="feed-icon" style="background:#E1F5EE">💰</div><div style="flex:1;min-width:0"><div style="font-size:13px;display:flex;align-items:center;gap:4px;flex-wrap:wrap">${o.mem} 회비납부 <span class="${isL?'jpy-b':'krw-b'}">${isL?TRIP.country.code:'KRW'}</span></div><div style="font-size:11px;color:var(--tx3);margin-top:1px">${isL?'외화 회비납부':'원화 회비납부'}${o.note?' · '+o.note:''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:500;color:#1D9E75">${isL?fL(o.amt):fK(o.amt)}</div>${isL?`<div style="font-size:10px;color:var(--tx3)">≈${fK(o.krwEquiv)}</div>`:''}</div></div>`;}
       if(item.type==='chg'){return `<div class="feed-row"><div class="feed-icon" style="background:#E6F1FB">💳</div><div style="flex:1;min-width:0"><div style="font-size:13px"><span class="tw-b">${TRIP.payMethods[0]||'카드'} 충전</span></div><div style="font-size:11px;color:var(--tx3);margin-top:1px">${fK(o.krw)} → ${fL(o.local)} · 환율 ${o.rate.toFixed(2)}${o.note?' · '+o.note:''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:500">${fL(o.local)}</div><div style="font-size:10px;color:var(--tx3)">${fK(o.krw)} 차감</div></div></div>`;}
       if(item.type==='ex'){return `<div class="feed-row"><div class="feed-icon" style="background:#FAEEDA">🔄</div><div style="flex:1;min-width:0"><div style="font-size:13px"><span class="cash-b">현금 환전</span></div><div style="font-size:11px;color:var(--tx3);margin-top:1px">${fK(o.krw)} → ${fL(o.local)} · 환율 ${o.rate.toFixed(2)}${o.note?' · '+o.note:''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:500">${fL(o.local)}</div><div style="font-size:10px;color:var(--tx3)">${fK(o.krw)} 차감</div></div></div>`;}
       if(item.type==='atm'){return `<div class="feed-row"><div class="feed-icon" style="background:#EEEDFE">🏧</div><div style="flex:1;min-width:0"><div style="font-size:13px"><span class="atm-b">ATM 인출</span></div><div style="font-size:11px;color:var(--tx3);margin-top:1px">카드→현금 이동${o.note?' · '+o.note:''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:500">${fL(o.local)}</div></div></div>`;}
@@ -1701,8 +1701,8 @@ function renderDepList(){
   if(!deposits.length){el.innerHTML='<div style="text-align:center;padding:1.5rem;color:var(--tx3);font-size:13px">없습니다</div>';return;}
   const kd=deposits.filter(d=>d.cur==='KRW'),ld=deposits.filter(d=>d.cur==='LOCAL');
   let html='';
-  if(kd.length){html+=`<div style="font-size:11px;font-weight:500;color:var(--tx3);margin-bottom:6px">원화 입금</div>`;html+=kd.map(d=>`<div class="row"><div class="av" style="background:${MBM[d.mem]||'#eee'};color:${MCM[d.mem]||'#333'}">${d.mem[0]}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${d.mem} <span class="krw-b">KRW</span></div><div style="font-size:11px;color:var(--tx3)">${fD(d.date)}${d.note?' · '+d.note:''}</div></div><div style="text-align:right"><div style="font-size:14px;font-weight:500;color:${MCM[d.mem]||'#333'}">${fK(d.amt)}</div></div><div class="row-actions"><button class="btn-icon edit" onclick="editDeposit(${d.id})">✎</button><button class="btn-icon del" onclick="delItem(deposits,${d.id},()=>{renderDepList();renderHome();renderSettle()})">✕</button></div></div>`).join('');}
-  if(ld.length){if(kd.length)html+=`<div class="divider"></div>`;html+=`<div style="font-size:11px;font-weight:500;color:var(--tx3);margin-bottom:6px">현지화 입금</div>`;html+=ld.map(d=>`<div class="row"><div class="av" style="background:${MBM[d.mem]||'#eee'};color:${MCM[d.mem]||'#333'}">${d.mem[0]}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${d.mem} <span class="jpy-b">${TRIP.country.code}</span></div><div style="font-size:11px;color:var(--tx3)">${fD(d.date)} · 환율 ${d.rate||'–'}${d.note?' · '+d.note:''}</div></div><div style="text-align:right"><div style="font-size:14px;font-weight:500;color:${MCM[d.mem]||'#333'}">${fL(d.amt)}</div><div style="font-size:10px;color:var(--tx3)">≈${fK(d.krwEquiv)}</div></div><div class="row-actions"><button class="btn-icon edit" onclick="editDeposit(${d.id})">✎</button><button class="btn-icon del" onclick="delItem(deposits,${d.id},()=>{renderDepList();renderHome();renderSettle()})">✕</button></div></div>`).join('');}
+  if(kd.length){html+=`<div style="font-size:11px;font-weight:500;color:var(--tx3);margin-bottom:6px">원화 회비</div>`;html+=kd.map(d=>`<div class="row"><div class="av" style="background:${MBM[d.mem]||'#eee'};color:${MCM[d.mem]||'#333'}">${d.mem[0]}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${d.mem} <span class="krw-b">KRW</span></div><div style="font-size:11px;color:var(--tx3)">${fD(d.date)}${d.note?' · '+d.note:''}</div></div><div style="text-align:right"><div style="font-size:14px;font-weight:500;color:${MCM[d.mem]||'#333'}">${fK(d.amt)}</div></div><div class="row-actions"><button class="btn-icon edit" onclick="editDeposit(${d.id})">✎</button><button class="btn-icon del" onclick="delItem(deposits,${d.id},()=>{renderDepList();renderHome();renderSettle()})">✕</button></div></div>`).join('');}
+  if(ld.length){if(kd.length)html+=`<div class="divider"></div>`;html+=`<div style="font-size:11px;font-weight:500;color:var(--tx3);margin-bottom:6px">외화 회비납부</div>`;html+=ld.map(d=>`<div class="row"><div class="av" style="background:${MBM[d.mem]||'#eee'};color:${MCM[d.mem]||'#333'}">${d.mem[0]}</div><div style="flex:1"><div style="font-size:13px;font-weight:500">${d.mem} <span class="jpy-b">${TRIP.country.code}</span></div><div style="font-size:11px;color:var(--tx3)">${fD(d.date)} · 환율 ${d.rate||'–'}${d.note?' · '+d.note:''}</div></div><div style="text-align:right"><div style="font-size:14px;font-weight:500;color:${MCM[d.mem]||'#333'}">${fL(d.amt)}</div><div style="font-size:10px;color:var(--tx3)">≈${fK(d.krwEquiv)}</div></div><div class="row-actions"><button class="btn-icon edit" onclick="editDeposit(${d.id})">✎</button><button class="btn-icon del" onclick="delItem(deposits,${d.id},()=>{renderDepList();renderHome();renderSettle()})">✕</button></div></div>`).join('');}
   el.innerHTML=html;
 }
 
@@ -1873,7 +1873,7 @@ function renderSettle(){
   function fr(l,v,col){return `<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>${l}</span><span${col?` style="color:${col}"`:''} >${v}</span></div>`;}
   function ft(l,v,col){return `<div style="display:flex;justify-content:space-between;font-size:13px;font-weight:500;border-top:.5px solid var(--bd3);padding-top:8px;margin-top:4px"><span>${l}</span><span${col?` style="color:${col}"`:''} >${v}</span></div>`;}
   document.getElementById('s-flow').innerHTML=
-    `<div style="font-size:12px;color:var(--tx2);margin-bottom:8px">원화 계좌</div>`+fr('원화 입금',fK(kDep()))+fr('카드 충전','–'+fK(tck),'#E24B4A')+fr('현금 환전','–'+fK(tek),'#E24B4A')+(krwExpTot>0?fr('원화 지출','–'+fK(krwExpTot),'#E24B4A'):'')+(rfK>0?fr('카드→계좌 이전','+'+fK(rfK),'#1D9E75'):'')+ft('계좌 잔액',fK(acct()),acct()<0?'#E24B4A':null)+
+    `<div style="font-size:12px;color:var(--tx2);margin-bottom:8px">원화 계좌</div>`+fr('원화 회비',fK(kDep()))+fr('카드 충전','–'+fK(tck),'#E24B4A')+fr('현금 환전','–'+fK(tek),'#E24B4A')+(krwExpTot>0?fr('원화 지출','–'+fK(krwExpTot),'#E24B4A'):'')+(rfK>0?fr('카드→계좌 이전','+'+fK(rfK),'#1D9E75'):'')+ft('계좌 잔액',fK(acct()),acct()<0?'#E24B4A':null)+
     `<div class="divider"></div><div style="font-size:12px;color:var(--tx2);margin-bottom:8px">현금</div>`+fr('환전+ATM',fL(tel+atmt))+fr('현금 지출','–'+fL(cashSpent()),'#E24B4A')+ft('현금 잔액',fL(cashBal()),cashBal()<0?'#E24B4A':null)+
     `<div class="divider"></div><div style="font-size:12px;color:var(--tx2);margin-bottom:8px">${TRIP.payMethods[0]||'카드'}</div>`+fr('충전',fL(tcl))+(rfL>0?fr('계좌 이전','–'+fL(rfL),'#E24B4A'):'')+fr('카드 지출','–'+fL(cardSpent()),'#E24B4A')+ft('카드 잔액',fL(cardBal()),cardBal()<0?'#E24B4A':null)+
     `<div style="font-size:11px;color:var(--tx3);margin-top:8px">가중평균 환율 ${r.toFixed(2)}</div>`;
