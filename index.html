@@ -906,6 +906,7 @@ function initApp(){
   document.getElementById('mainTabs').style.display='';
   hideSaveBanner();
   if(!TRIP._id) TRIP._id='trip_'+Date.now();
+  if(!TRIP.country) TRIP.country={flag:'🌏',name:'',code:'JPY',sym:'¥',r100:true};
   saveCurrentTrip(true);
   _navigate('app');
   go('home');
@@ -1246,6 +1247,7 @@ function saveHistory(list){
 
 function saveCurrentTrip(silent=false){
   if(!TRIP.name) return;
+  if(!TRIP.country||!TRIP.members||TRIP.members.length===0) return; // 불완전한 여행 저장 방지
   const list=loadHistory();
   const snapshot={
     id:TRIP._id||(TRIP._id='trip_'+Date.now()),
@@ -1273,6 +1275,9 @@ function loadTrip(id){
   const list=loadHistory();
   const h=list.find(x=>x.id===id);
   if(!h) return;
+  if(!h.trip||!h.trip.country||!h.trip.members||h.trip.members.length===0){
+    alert('이 여행 데이터가 불완전합니다. 삭제 후 다시 시작해 주세요.');return;
+  }
   // 현재 진행 중인 여행이 있고 다른 여행을 불러오는 경우
   if(TRIP.name && TRIP._id !== h.id){
     const choice=confirm(`"${h.trip.name}" 여행을 불러옵니다.\n\n현재 진행 중인 "${TRIP.name}" 여행은 자동 저장됩니다.\n\n계속하시겠습니까?`);
@@ -1313,7 +1318,9 @@ function renderHistList(){
   var list=loadHistory();
   var el=document.getElementById('histList');
   if(list.length===0){el.innerHTML='<div class="empty-hist">저장된 여행이 없습니다</div>';return;}
-  el.innerHTML=list.map(function(h){
+  el.innerHTML=list.filter(function(h){
+    return h.trip&&h.trip.name&&h.trip.country&&h.trip.members&&h.trip.members.length>0;
+  }).map(function(h){
     var t=h.trip,sd=t.startDate||'',ed=t.endDate||'';
     var sm=sd?parseInt(sd.slice(5,7))+'/'+parseInt(sd.slice(8,10)):'';
     var em=ed?parseInt(ed.slice(5,7))+'/'+parseInt(ed.slice(8,10)):'';
