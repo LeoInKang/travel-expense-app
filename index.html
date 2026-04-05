@@ -6,35 +6,87 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="TripPay">
+<meta name="theme-color" content="#1a3a5c">
+<meta name="description" content="여행 공금 관리 앱 — 입금·충전·지출·정산 한 번에">
 <link rel="apple-touch-icon" id="appIcon" href="">
+<link rel="manifest" id="manifestLink" href="">
 <script>
-// 아이폰 홈 화면 아이콘 동적 생성
+// ── 아이콘 동적 생성 ──
 (function(){
   try{
     const c=document.createElement('canvas');
-    c.width=180;c.height=180;
+    c.width=512;c.height=512;
     const ctx=c.getContext('2d');
-    // 배경 (둥근 사각형)
-    const r=36;
+    const r=100;
     ctx.beginPath();
-    ctx.moveTo(r,0);ctx.lineTo(180-r,0);ctx.quadraticCurveTo(180,0,180,r);
-    ctx.lineTo(180,180-r);ctx.quadraticCurveTo(180,180,180-r,180);
-    ctx.lineTo(r,180);ctx.quadraticCurveTo(0,180,0,180-r);
+    ctx.moveTo(r,0);ctx.lineTo(512-r,0);ctx.quadraticCurveTo(512,0,512,r);
+    ctx.lineTo(512,512-r);ctx.quadraticCurveTo(512,512,512-r,512);
+    ctx.lineTo(r,512);ctx.quadraticCurveTo(0,512,0,512-r);
     ctx.lineTo(0,r);ctx.quadraticCurveTo(0,0,r,0);ctx.closePath();
-    const grad=ctx.createLinearGradient(0,0,180,180);
+    const grad=ctx.createLinearGradient(0,0,512,512);
     grad.addColorStop(0,'#1a3a5c');grad.addColorStop(.5,'#2563a8');grad.addColorStop(1,'#378ADD');
     ctx.fillStyle=grad;ctx.fill();
-    // 비행기 이모지
-    ctx.font='72px serif';
+    ctx.font='220px serif';
     ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('✈️',90,72);
-    // TripPay 텍스트
-    ctx.font='bold 28px -apple-system,sans-serif';
+    ctx.fillText('✈️',256,200);
+    ctx.font='bold 80px -apple-system,sans-serif';
     ctx.fillStyle='#ffffff';
-    ctx.fillText('TripPay',90,138);
-    document.getElementById('appIcon').href=c.toDataURL('image/png');
+    ctx.fillText('TripPay',256,390);
+    const iconDataUrl=c.toDataURL('image/png');
+
+    // apple-touch-icon (180px)
+    const c2=document.createElement('canvas');
+    c2.width=180;c2.height=180;
+    const ctx2=c2.getContext('2d');
+    ctx2.drawImage(c,0,0,180,180);
+    document.getElementById('appIcon').href=c2.toDataURL('image/png');
+
+    // PWA 매니페스트 동적 생성
+    const manifest={
+      name:'TripPay',
+      short_name:'TripPay',
+      description:'여행 공금 관리 — 입금·충전·지출·정산 한 번에',
+      start_url:'./',
+      display:'standalone',
+      orientation:'portrait',
+      background_color:'#1a3a5c',
+      theme_color:'#1a3a5c',
+      lang:'ko',
+      icons:[
+        {src:iconDataUrl,sizes:'512x512',type:'image/png',purpose:'any maskable'},
+        {src:iconDataUrl,sizes:'192x192',type:'image/png'}
+      ]
+    };
+    const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
+    document.getElementById('manifestLink').href=URL.createObjectURL(blob);
   }catch(e){}
 })();
+
+// ── 서비스워커 등록 (오프라인 지원) ──
+if('serviceWorker' in navigator){
+  const swCode=`
+    const CACHE='trippay-v1';
+    const URLS=[self.location.href.replace(/\\/[^\\/]*$/, '/') || '/'];
+    self.addEventListener('install',e=>{
+      e.waitUntil(caches.open(CACHE).then(c=>c.addAll(URLS)));
+      self.skipWaiting();
+    });
+    self.addEventListener('activate',e=>{
+      e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))));
+      self.clients.claim();
+    });
+    self.addEventListener('fetch',e=>{
+      e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{
+        const clone=res.clone();
+        caches.open(CACHE).then(c=>c.put(e.request,clone));
+        return res;
+      }).catch(()=>caches.match(e.request))));
+    });
+  `;
+  const swBlob=new Blob([swCode],{type:'text/javascript'});
+  const swUrl=URL.createObjectURL(swBlob);
+  navigator.serviceWorker.register(swUrl).catch(()=>{});
+}
 </script>
 <title>TripPay</title>
 <style>
