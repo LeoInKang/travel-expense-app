@@ -12,7 +12,7 @@
 <link rel="manifest" id="manifestLink" href="">
 <script>
 // ── 아이콘 동적 생성 ──
-(function(){
+function _buildIcon(){
   try{
     const c=document.createElement('canvas');
     c.width=512;c.height=512;
@@ -26,29 +26,13 @@
     const grad=ctx.createLinearGradient(0,0,512,512);
     grad.addColorStop(0,'#1a3a5c');grad.addColorStop(.5,'#2563a8');grad.addColorStop(1,'#378ADD');
     ctx.fillStyle=grad;ctx.fill();
-    ctx.font='220px serif';
+    // 이모지 비행기 (폰트 로드 후 렌더링)
+    ctx.font='260px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",serif';
     ctx.textAlign='center';ctx.textBaseline='middle';
-    // 비행기 SVG 경로로 직접 그리기 (이모지 Safari 미지원 대체)
-    ctx.save();
-    ctx.translate(256,210);
-    ctx.rotate(-Math.PI/4);
-    ctx.fillStyle='rgba(255,255,255,0.95)';
-    // 동체
-    ctx.beginPath();ctx.ellipse(0,0,28,110,0,0,Math.PI*2);ctx.fill();
-    // 주익
-    ctx.beginPath();ctx.moveTo(-20,20);ctx.lineTo(-105,85);ctx.lineTo(-85,95);
-    ctx.lineTo(0,50);ctx.lineTo(85,95);ctx.lineTo(105,85);ctx.lineTo(20,20);ctx.closePath();ctx.fill();
-    // 꼬리날개
-    ctx.beginPath();ctx.moveTo(-12,75);ctx.lineTo(-55,110);ctx.lineTo(-45,118);
-    ctx.lineTo(0,95);ctx.lineTo(45,118);ctx.lineTo(55,110);ctx.lineTo(12,75);ctx.closePath();ctx.fill();
-    // 노즈
-    ctx.beginPath();ctx.ellipse(0,-110,18,22,0,0,Math.PI*2);
-    ctx.fillStyle='rgba(200,230,255,0.9)';ctx.fill();
-    ctx.restore();
-    ctx.font='bold 80px -apple-system,sans-serif';
+    ctx.fillText('✈️',256,195);
+    ctx.font='bold 72px -apple-system,sans-serif';
     ctx.fillStyle='#ffffff';
-    ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('TripPay',256,410);
+    ctx.fillText('TripPay',256,400);
     const iconDataUrl=c.toDataURL('image/png');
 
     // apple-touch-icon (180px)
@@ -77,7 +61,13 @@
     const blob=new Blob([JSON.stringify(manifest)],{type:'application/json'});
     document.getElementById('manifestLink').href=URL.createObjectURL(blob);
   }catch(e){}
-})();
+}
+// 폰트 로드 완료 후 아이콘 생성 (이모지가 제대로 렌더링되도록)
+if(document.fonts&&document.fonts.ready){
+  document.fonts.ready.then(_buildIcon);
+}else{
+  _buildIcon();
+}
 
 // ── 서비스워커 등록 (오프라인 지원) ──
 if('serviceWorker' in navigator){
