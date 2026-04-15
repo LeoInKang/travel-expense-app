@@ -1995,7 +1995,6 @@ async function shareTrip(){
         headers:{
           'Content-Type':'application/json',
           'X-Master-Key':JBIN_MASTER,
-          'X-Bin-Name': TRIP.name,
           'X-Bin-Private':'false'
         },
         body: JSON.stringify(shareData)
