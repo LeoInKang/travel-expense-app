@@ -8,14 +8,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="TripPay">
 <meta property="og:title" id="og-title" content="TripPay — 여행 경비 공유">
-<meta property="og:description" id="og-desc" content="여행 지출 내역과 정산 결과를 확인하세요.">
+<meta property="og:description" id="og-desc" content="여행 지출 내역을 확인하세요.">
 <meta property="og:url" id="og-url" content="">
 <meta property="og:image" content="https://leoinkang.github.io/travel-expense-app/icon.png">
 
 <!-- 카카오톡 전용 -->
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" id="tw-title" content="TripPay — 여행 경비 공유">
-<meta name="twitter:description" id="tw-desc" content="여행 지출 내역과 정산 결과를 확인하세요.">
+<meta name="twitter:description" id="tw-desc" content="여행 지출 내역을 확인하세요.">
 <meta name="twitter:image" content="https://leoinkang.github.io/travel-expense-app/icon.png">
 
 <title id="page-title">TripPay — 여행 경비 공유</title>
@@ -137,7 +137,7 @@ function render(d){
 
   // OG 태그 업데이트 (동적)
   const title = 'TripPay — ' + d.tripName;
-  const desc = (dateStr ? dateStr + ' · ' : '') + d.members.join(', ') + '\n지출 내역과 정산 결과를 확인하세요.';
+  const desc = (dateStr ? dateStr + ' · ' : '') + d.members.join(', ') + '\n지출 내역을 확인하세요.';
   document.title = title;
   document.getElementById('og-title').setAttribute('content', title);
   document.getElementById('og-desc').setAttribute('content', desc);
@@ -178,39 +178,6 @@ function render(d){
       </div>
     </div>
 
-    <!-- 정산 결과 -->
-    <div class="card">
-      <div class="card-ttl">💚 정산 결과</div>
-      <div class="stat-grid">
-        <div class="stat-box">
-          <div class="stat-lbl">총 입금</div>
-          <div class="stat-val">${fK(s.totalPaid)}</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-lbl">총 지출</div>
-          <div class="stat-val" style="color:#E24B4A">${fK(s.totExp)}</div>
-        </div>
-        ${s.acctBal > 0 ? `<div class="stat-box">
-          <div class="stat-lbl">계좌 잔액</div>
-          <div class="stat-val" style="color:#1D9E75">${fK(s.acctBal)}</div>
-          <div style="font-size:10px;color:var(--tx3);margin-top:2px">인당 ${fK(Math.round(s.acctBal/s.members.length))}</div>
-        </div>` : ''}
-      </div>
-      ${s.members.map((m, i) => {
-        const [bg, fg] = COLORS[i % COLORS.length];
-        return `<div class="member-row">
-          <div class="av" style="background:${bg};color:${fg}">${m.name[0]}</div>
-          <div class="member-info">
-            <div class="member-name">${m.name}</div>
-            <div class="member-sub">납부 ${fK(m.paid)}${balDesc ? ' · ' + balDesc : ''}</div>
-          </div>
-          <div>${m.refund > 0
-            ? `<span class="badge-green">💚 ${fK(m.refund)} 돌려받기</span>`
-            : `<span class="badge-blue">✅ 정산 완료</span>`
-          }</div>
-        </div>`;
-      }).join('')}
-    </div>
 
     <!-- 날짜별 지출 내역 -->
     <div class="card">
