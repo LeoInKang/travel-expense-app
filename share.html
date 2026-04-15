@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- OG 태그 기본값 (JS로 덮어씀) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TripPay">
+<meta property="og:title" id="og-title" content="TripPay — 여행 경비 공유">
+<meta property="og:description" id="og-desc" content="여행 지출 내역과 정산 결과를 확인하세요.">
+<meta property="og:url" id="og-url" content="">
+<meta property="og:image" content="https://leoinkang.github.io/travel-expense-app/icon.png">
+
+<!-- 카카오톡 전용 -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" id="tw-title" content="TripPay — 여행 경비 공유">
+<meta name="twitter:description" id="tw-desc" content="여행 지출 내역과 정산 결과를 확인하세요.">
+<meta name="twitter:image" content="https://leoinkang.github.io/travel-expense-app/icon.png">
+
+<title id="page-title">TripPay — 여행 경비 공유</title>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg1:#fff;--bg2:#f5f5f0;--bg3:#eeedе8;
+  --tx1:#1a1a1a;--tx2:#6b6b6b;--tx3:#9b9b9b;
+  --bd3:rgba(0,0,0,0.1);
+  --rmd:8px;--rlg:12px;
+  --font:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+}
+@media(prefers-color-scheme:dark){:root{
+  --bg1:#1c1c1e;--bg2:#2c2c2e;--bg3:#3a3a3c;
+  --tx1:#f2f2f7;--tx2:#aeaeb2;--tx3:#636366;
+  --bd3:rgba(255,255,255,0.1);
+}}
+html,body{min-height:100%;background:var(--bg3);font-family:var(--font);color:var(--tx1)}
+.app{max-width:840px;margin:0 auto;padding:1rem}
+.card{background:var(--bg1);border:.5px solid var(--bd3);border-radius:var(--rlg);padding:1rem 1.25rem;margin-bottom:1rem}
+.card-ttl{font-size:16px;font-weight:700;margin-bottom:12px}
+
+/* 로딩 */
+#loading{text-align:center;padding:4rem 1rem;color:var(--tx2)}
+#loading .icon{font-size:48px;margin-bottom:16px;animation:float 2s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+
+/* 헤더 */
+.trip-header{background:linear-gradient(135deg,#1a3a5c,#378ADD);border-radius:16px;padding:20px;margin-bottom:16px;color:#fff}
+.trip-label{font-size:11px;opacity:.7;margin-bottom:4px}
+.trip-name{font-size:24px;font-weight:800;margin-bottom:6px;letter-spacing:-.5px}
+.trip-meta{font-size:13px;opacity:.8;line-height:1.5}
+
+/* 정산 */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat-box{background:var(--bg2);border-radius:var(--rmd);padding:12px}
+.stat-lbl{font-size:11px;color:var(--tx3);margin-bottom:4px}
+.stat-val{font-size:17px;font-weight:700}
+
+/* 참석자 */
+.member-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:.5px solid var(--bd3)}
+.member-row:last-child{border-bottom:none}
+.av{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;flex-shrink:0}
+.member-info{flex:1}
+.member-name{font-size:15px;font-weight:600;margin-bottom:2px}
+.member-sub{font-size:11px;color:var(--tx3)}
+.badge-green{background:#E1F5EE;color:#085041;font-size:13px;font-weight:500;padding:6px 12px;border-radius:10px;white-space:nowrap}
+.badge-blue{background:#E6F1FB;color:#0C447C;font-size:13px;padding:6px 12px;border-radius:10px;white-space:nowrap}
+
+/* 지출 내역 */
+.exp-row{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:.5px solid var(--bd3)}
+.exp-row:last-child{border-bottom:none}
+.exp-info{flex:1}
+.exp-name{font-size:13px;font-weight:500}
+.exp-sub{font-size:11px;color:var(--tx3);margin-top:1px}
+.exp-amt{font-size:13px;font-weight:500;white-space:nowrap}
+
+/* 푸터 */
+.footer{text-align:center;font-size:11px;color:var(--tx3);padding:1.5rem 0}
+.footer a{color:#378ADD;text-decoration:none}
+
+/* 에러 */
+.error-box{text-align:center;padding:3rem 1rem}
+.error-box .emoji{font-size:48px;margin-bottom:16px}
+.error-box p{color:var(--tx2);font-size:14px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div id="loading">
+    <div class="icon">✈️</div>
+    <div>여행 정보를 불러오는 중...</div>
+  </div>
+  <div id="content" style="display:none"></div>
+</div>
+
+<script>
+const JBIN_ACCESS = '$2a$10$3QGgPhLbKA0q/q.ZCZomLea1A1SrpThjPf2MJztF4GsnG.h4NaC6m';
+
+const fK = v => Math.round(v).toLocaleString('ko-KR') + '원';
+const fL = (v, sym) => sym + Math.round(v).toLocaleString('ko-KR');
+
+const COLORS = [
+  ['#E6F1FB','#0C447C'],['#E1F5EE','#085041'],['#FAEEDA','#633806'],
+  ['#EEEDFE','#3C3489'],['#EAF3DE','#27500A'],['#FCF0F0','#791F1F'],
+];
+
+async function init(){
+  const params = new URLSearchParams(location.search);
+  const binId = params.get('id');
+
+  if(!binId){
+    showError('링크가 올바르지 않아요.', '총무에게 링크를 다시 받아보세요.');
+    return;
+  }
+
+  try {
+    const res = await fetch('https://api.jsonbin.io/v3/b/' + binId + '/latest', {
+      headers: {'X-Access-Key': JBIN_ACCESS}
+    });
+    if(!res.ok) throw new Error('데이터를 불러오지 못했어요.');
+    const json = await res.json();
+    render(json.record);
+  } catch(e) {
+    showError('불러오기 실패', e.message);
+  }
+}
+
+function render(d){
+  const s = d.settle;
+  const sym = d.country?.sym || '';
+  const flag = d.country?.flag || '🌏';
+  const sd = d.startDate || '', ed = d.endDate || '';
+  const sm = sd ? parseInt(sd.slice(5,7)) + '/' + parseInt(sd.slice(8,10)) : '';
+  const em = ed ? parseInt(ed.slice(5,7)) + '/' + parseInt(ed.slice(8,10)) : '';
+  const nights = sd && ed ? Math.round((new Date(ed) - new Date(sd)) / 86400000) : 0;
+  const dateStr = sm && em ? sd.slice(0,4) + '년 ' + sm + '–' + em + (nights > 0 ? ' · ' + nights + '박' + (nights+1) + '일' : '') : '';
+
+  // OG 태그 업데이트 (동적)
+  const title = 'TripPay — ' + d.tripName;
+  const desc = (dateStr ? dateStr + ' · ' : '') + d.members.join(', ') + '\n지출 내역과 정산 결과를 확인하세요.';
+  document.title = title;
+  document.getElementById('og-title').setAttribute('content', title);
+  document.getElementById('og-desc').setAttribute('content', desc);
+  document.getElementById('tw-title').setAttribute('content', title);
+  document.getElementById('tw-desc').setAttribute('content', desc);
+
+  // 잔액 항목
+  const balParts = [];
+  if(s.acctBal > 0) balParts.push('계좌 ' + fK(Math.round(s.acctBal / s.members.length)));
+  if(s.cardBal > 0) balParts.push('카드 ' + fL(Math.round(s.cardBal / s.members.length), sym));
+  if(s.cashBal > 0) balParts.push('현금 ' + fL(Math.round(s.cashBal / s.members.length), sym));
+  const balDesc = balParts.join(' + ');
+
+  // 날짜별 지출 그룹
+  const expByDate = {};
+  (d.expenses || []).forEach(e => {
+    if(!expByDate[e.date]) expByDate[e.date] = [];
+    expByDate[e.date].push(e);
+  });
+  const krwByDate = {};
+  (d.krwExps || []).forEach(e => {
+    if(!krwByDate[e.date]) krwByDate[e.date] = [];
+    krwByDate[e.date].push(e);
+  });
+  const allDates = [...new Set([...Object.keys(expByDate), ...Object.keys(krwByDate)])].sort();
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('content').style.display = '';
+  document.getElementById('content').innerHTML = `
+    <!-- 헤더 -->
+    <div class="trip-header">
+      <div class="trip-label">여행 경비 공유 · TripPay</div>
+      <div class="trip-name">${flag} ${d.tripName}</div>
+      <div class="trip-meta">
+        ${dateStr ? dateStr + '<br>' : ''}
+        ${d.members.join(' · ')}
+        ${d.note ? '<br>' + d.note : ''}
+      </div>
+    </div>
+
+    <!-- 정산 결과 -->
+    <div class="card">
+      <div class="card-ttl">💚 정산 결과</div>
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="stat-lbl">총 입금</div>
+          <div class="stat-val">${fK(s.totalPaid)}</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-lbl">총 지출</div>
+          <div class="stat-val" style="color:#E24B4A">${fK(s.totExp)}</div>
+        </div>
+        ${s.acctBal > 0 ? `<div class="stat-box">
+          <div class="stat-lbl">계좌 잔액</div>
+          <div class="stat-val" style="color:#1D9E75">${fK(s.acctBal)}</div>
+          <div style="font-size:10px;color:var(--tx3);margin-top:2px">인당 ${fK(Math.round(s.acctBal/s.members.length))}</div>
+        </div>` : ''}
+      </div>
+      ${s.members.map((m, i) => {
+        const [bg, fg] = COLORS[i % COLORS.length];
+        return `<div class="member-row">
+          <div class="av" style="background:${bg};color:${fg}">${m.name[0]}</div>
+          <div class="member-info">
+            <div class="member-name">${m.name}</div>
+            <div class="member-sub">납부 ${fK(m.paid)}${balDesc ? ' · ' + balDesc : ''}</div>
+          </div>
+          <div>${m.refund > 0
+            ? `<span class="badge-green">💚 ${fK(m.refund)} 돌려받기</span>`
+            : `<span class="badge-blue">✅ 정산 완료</span>`
+          }</div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <!-- 날짜별 지출 내역 -->
+    <div class="card">
+      <div class="card-ttl">📋 지출 내역</div>
+      ${allDates.map(date => {
+        const fxList = expByDate[date] || [];
+        const krwList = krwByDate[date] || [];
+        return `
+          <div style="font-size:11px;font-weight:500;color:var(--tx3);padding:8px 0 4px;border-bottom:.5px solid var(--bd3);margin-top:4px">${date}</div>
+          ${fxList.map(e => `
+            <div class="exp-row">
+              <div class="exp-info">
+                <div class="exp-name">${e.name}</div>
+                <div class="exp-sub">${e.pay}${e.note ? ' · ' + e.note : ''}</div>
+              </div>
+              <div class="exp-amt">${sym}${Math.round(e.amt).toLocaleString('ko-KR')}</div>
+            </div>
+          `).join('')}
+          ${krwList.map(e => `
+            <div class="exp-row">
+              <div class="exp-info">
+                <div class="exp-name">${e.name}</div>
+                <div class="exp-sub">원화 · ${e.payer}${e.note ? ' · ' + e.note : ''}</div>
+              </div>
+              <div class="exp-amt">${Math.round(e.amt).toLocaleString('ko-KR')}원</div>
+            </div>
+          `).join('')}
+        `;
+      }).join('')}
+    </div>
+
+    <div class="footer">
+      ${new Date(d.createdAt).toLocaleString('ko-KR')} 기준<br>
+      <a href="https://leoinkang.github.io/travel-expense-app">TripPay로 여행 경비 관리하기 →</a>
+    </div>
+  `;
+}
+
+function showError(title, msg){
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('content').style.display = '';
+  document.getElementById('content').innerHTML = `
+    <div class="error-box">
+      <div class="emoji">😅</div>
+      <div class="card-ttl" style="margin-bottom:8px">${title}</div>
+      <p>${msg}</p>
+    </div>
+  `;
+}
+
+init();
+</script>
+</body>
+</html>
