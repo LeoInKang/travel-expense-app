@@ -1955,8 +1955,7 @@ async function shareTrip(){
   if(!TRIP.name){alert('여행을 먼저 시작해 주세요.');return;}
   const btn = document.querySelector('#p-settle .btn-pri');
   const status = document.getElementById('shareStatus');
-  btn.textContent = '⏳ 공유 링크 생성 중...';
-  btn.disabled = true;
+  if(btn){ btn.textContent = '⏳ 공유 링크 생성 중...'; btn.disabled = true; }
 
   // 공유할 데이터 구성 (읽기 전용)
   const shareData = {
@@ -2018,8 +2017,7 @@ async function shareTrip(){
     document.getElementById('shareResult').style.display = '';
   }
 
-  btn.innerHTML = '🔗 참석자에게 공유하기';
-  btn.disabled = false;
+  if(btn){ btn.innerHTML = '🔗 참석자에게 공유하기'; btn.disabled = false; }
 }
 
 function buildShareSettle(){
