@@ -1945,9 +1945,7 @@ function hideLanding(){}
 function showHistFromLanding(){ _navigate('hist'); }
 function loadTripFromLanding(id){ loadTrip(id); }
 
-/* ──────────────────────────────
-   JSONBin 공유 기능
-────────────────────────────── */
+/* ── JSONBin 공유 기능 ──
 const JBIN_MASTER = '$2a$10$M84LQ060lhSB33BwfG4On.rUU7tOFYSfy48QTeBp4hMfwDv/3yaIi';
 const JBIN_ACCESS = '$2a$10$3QGgPhLbKA0q/q.ZCZomLea1A1SrpThjPf2MJztF4GsnG.h4NaC6m';
 
@@ -2052,159 +2050,47 @@ function buildShareSettle(){
 
 function copyShareUrl(){
   const inp = document.getElementById('shareUrl');
-  inp.select();
-  inp.setSelectionRange(0,9999);
-  navigator.clipboard.writeText(inp.value).then(()=>{
-    const btn = inp.nextElementSibling;
-    btn.textContent='✅ 복사됨';
-    setTimeout(()=>{btn.textContent='복사';},2000);
-  }).catch(()=>{
-    document.execCommand('copy');
-    alert('링크가 복사됐어요!');
-  });
+  const btn = inp.nextElementSibling;
+  const url = inp.value;
+
+  // iOS Safari PWA 호환 복사
+  if(navigator.share){
+    // iOS Safari는 navigator.share가 더 안정적
+    navigator.share({title:'TripPay 여행 경비 공유', url: url})
+      .then(()=>{ btn.textContent='✅ 공유됨'; setTimeout(()=>{btn.textContent='복사';},2000); })
+      .catch(()=>{}); // 취소해도 에러 무시
+    return;
+  }
+  // 그 외 환경
+  try {
+    inp.select();
+    inp.setSelectionRange(0,9999);
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(()=>{
+        btn.textContent='✅ 복사됨';
+        setTimeout(()=>{btn.textContent='복사';},2000);
+      }).catch(()=>{
+        document.execCommand('copy');
+        btn.textContent='✅ 복사됨';
+        setTimeout(()=>{btn.textContent='복사';},2000);
+      });
+    } else {
+      document.execCommand('copy');
+      btn.textContent='✅ 복사됨';
+      setTimeout(()=>{btn.textContent='복사';},2000);
+    }
+  } catch(e) {
+    alert('링크를 길게 눌러서 복사해 주세요:\n' + url);
+  }
 }
 
 /* ──────────────────────────────
    공유 뷰어 (참석자용)
 ────────────────────────────── */
-async function checkShareMode(){
-  const params = new URLSearchParams(location.search);
-  const binId = params.get('share');
-  if(!binId) return false;
-
-  // 공유 뷰어 화면 표시
-  document.getElementById('mainApp').style.display='none';
-  document.body.insertAdjacentHTML('beforeend',`
-    <div id="shareViewer" style="min-height:100vh;background:var(--bg3);padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom)">
-      <div style="max-width:840px;margin:0 auto;padding:1rem">
-        <div id="svLoading" style="text-align:center;padding:3rem;color:var(--tx2)">
-          <div style="font-size:40px;margin-bottom:12px">✈️</div>
-          <div>여행 정보를 불러오는 중...</div>
-        </div>
-        <div id="svContent" style="display:none"></div>
-      </div>
-    </div>
-  `);
-
-  try {
-    const res = await fetch('https://api.jsonbin.io/v3/b/'+binId+'/latest',{
-      headers:{'X-Access-Key':JBIN_ACCESS}
-    });
-    if(!res.ok) throw new Error('데이터를 불러오지 못했어요');
-    const json = await res.json();
-    const d = json.record;
-    renderShareViewer(d);
-  } catch(e) {
-    document.getElementById('svLoading').innerHTML=`<div style="color:#E24B4A;padding:2rem;text-align:center">❌ ${e.message}</div>`;
-  }
-  return true;
-}
-
-function renderShareViewer(d){
-  document.getElementById('svLoading').style.display='none';
-  const s = d.settle;
-  const sym = d.country?.sym||'';
-  const flag = d.country?.flag||'🌏';
-  const sd = d.startDate||'', ed = d.endDate||'';
-  const sm = sd?parseInt(sd.slice(5,7))+'/'+parseInt(sd.slice(8,10)):'';
-  const em = ed?parseInt(ed.slice(5,7))+'/'+parseInt(ed.slice(8,10)):'';
-  const fK = v=>Math.round(v).toLocaleString('ko-KR')+'원';
-  const fL = v=>sym+Math.round(v).toLocaleString('ko-KR');
-
-  // 잔액 항목 (0 아닌 것만)
-  const balItems = [];
-  if(s.acctBal>0) balItems.push(`계좌 ${fK(Math.round(s.acctBal/s.members.length))}`);
-  if(s.cardBal>0) balItems.push(`카드 ${fL(Math.round(s.cardBal/s.members.length))}`);
-  if(s.cashBal>0) balItems.push(`현금 ${fL(Math.round(s.cashBal/s.members.length))}`);
-
-  document.getElementById('svContent').style.display='';
-  document.getElementById('svContent').innerHTML=`
-    <!-- 헤더 -->
-    <div style="background:linear-gradient(135deg,#1a3a5c,#378ADD);border-radius:16px;padding:20px;margin-bottom:16px;color:#fff">
-      <div style="font-size:11px;opacity:.7;margin-bottom:4px">여행 경비 공유</div>
-      <div style="font-size:22px;font-weight:800;margin-bottom:6px">${flag} ${d.tripName}</div>
-      <div style="font-size:13px;opacity:.8">${sm&&em?sd.slice(0,4)+'년 '+sm+'–'+em+' · ':''} ${d.members.join(', ')}</div>
-      ${d.note?`<div style="font-size:12px;opacity:.6;margin-top:4px">${d.note}</div>`:''}
-    </div>
-
-    <!-- 정산 요약 -->
-    <div class="card">
-      <div class="card-ttl">정산 결과</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
-        <div style="background:var(--bg2);border-radius:var(--rmd);padding:12px">
-          <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">총 입금</div>
-          <div style="font-size:16px;font-weight:700">${fK(s.totalPaid)}</div>
-        </div>
-        <div style="background:var(--bg2);border-radius:var(--rmd);padding:12px">
-          <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">총 지출</div>
-          <div style="font-size:16px;font-weight:700;color:#E24B4A">${fK(s.totExp)}</div>
-        </div>
-        ${s.acctBal>0?`<div style="background:var(--bg2);border-radius:var(--rmd);padding:12px">
-          <div style="font-size:11px;color:var(--tx3);margin-bottom:4px">계좌 잔액</div>
-          <div style="font-size:16px;font-weight:700;color:#1D9E75">${fK(s.acctBal)}</div>
-          <div style="font-size:10px;color:var(--tx3);margin-top:2px">인당 ${fK(Math.round(s.acctBal/s.members.length))}</div>
-        </div>`:''}
-      </div>
-      <!-- 참석자별 -->
-      ${s.members.map(m=>`
-        <div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:.5px solid var(--bd3)">
-          <div style="width:42px;height:42px;border-radius:50%;background:#E6F1FB;color:#0C447C;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:600;flex-shrink:0">${m.name[0]}</div>
-          <div style="flex:1">
-            <div style="font-size:15px;font-weight:600">${m.name}</div>
-            <div style="font-size:11px;color:var(--tx3)">납부 ${fK(m.paid)}${balItems.length?' · '+balItems.join(' + '):''}</div>
-          </div>
-          <div>${m.refund>0
-            ?`<span style="background:#E1F5EE;color:#085041;font-size:13px;font-weight:500;padding:6px 12px;border-radius:10px">💚 ${fK(m.refund)} 돌려받기</span>`
-            :`<span style="background:#E6F1FB;color:#0C447C;font-size:13px;padding:6px 12px;border-radius:10px">✅ 정산 완료</span>`
-          }</div>
-        </div>
-      `).join('')}
-    </div>
-
-    <!-- 지출 내역 -->
-    <div class="card">
-      <div class="card-ttl">지출 내역 (${sym} 외화)</div>
-      <div>
-        ${d.expenses.map(e=>`
-          <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:.5px solid var(--bd3)">
-            <div style="flex:1">
-              <div style="font-size:13px;font-weight:500">${e.name}</div>
-              <div style="font-size:11px;color:var(--tx3)">${e.date} · ${e.pay}${e.note?' · '+e.note:''}</div>
-            </div>
-            <div style="font-size:13px;font-weight:500">${sym}${Math.round(e.amt).toLocaleString('ko-KR')}</div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-
-    ${d.krwExps&&d.krwExps.length?`
-    <div class="card">
-      <div class="card-ttl">원화 지출</div>
-      ${d.krwExps.map(e=>`
-        <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:.5px solid var(--bd3)">
-          <div style="flex:1">
-            <div style="font-size:13px;font-weight:500">${e.name}</div>
-            <div style="font-size:11px;color:var(--tx3)">${e.date} · ${e.payer}${e.note?' · '+e.note:''}</div>
-          </div>
-          <div style="font-size:13px;font-weight:500">${Math.round(e.amt).toLocaleString('ko-KR')}원</div>
-        </div>
-      `).join('')}
-    </div>`:''}
-
-    <div style="text-align:center;font-size:11px;color:var(--tx3);padding:1rem 0">
-      TripPay · ${new Date(d.createdAt).toLocaleString('ko-KR')} 기준
-    </div>
-  `;
-}
 
 renderCountryGrid();
-// 공유 모드 체크 (URL에 ?share= 파라미터가 있으면 뷰어 표시)
-checkShareMode().then(isShare=>{
-  if(!isShare){
-    _screenStack=[];
-    _navigate('landing');
-  }
-});
+_screenStack=[];
+_navigate('landing');
 </script>
 </body>
 </html>
