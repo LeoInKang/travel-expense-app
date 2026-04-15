@@ -73,7 +73,7 @@ if(document.fonts&&document.fonts.ready){
 // ── 서비스워커 등록 (오프라인 지원) ──
 if('serviceWorker' in navigator){
   const swCode=`
-    const CACHE='trippay-v3';
+    const CACHE='trippay-v4';
     const URLS=[self.location.href.replace(/\\/[^\\/]*$/, '/') || '/'];
     self.addEventListener('install',e=>{
       e.waitUntil(caches.open(CACHE).then(c=>c.addAll(URLS)));
