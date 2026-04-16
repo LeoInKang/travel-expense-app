@@ -2022,16 +2022,6 @@ function copyShareUrl(){
   const inp = document.getElementById('shareUrl');
   const btn = inp.nextElementSibling;
   const url = inp.value;
-
-  // iOS Safari PWA 호환 복사
-  if(navigator.share){
-    // iOS Safari는 navigator.share가 더 안정적
-    navigator.share({title:'TripPay 여행 경비 공유', url: url})
-      .then(()=>{ btn.textContent='✅ 공유됨'; setTimeout(()=>{btn.textContent='복사';},2000); })
-      .catch(()=>{}); // 취소해도 에러 무시
-    return;
-  }
-  // 그 외 환경
   try {
     inp.select();
     inp.setSelectionRange(0,9999);
