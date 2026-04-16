@@ -79,18 +79,6 @@ if('serviceWorker' in navigator){
 }
 </script>
 <title>TripPay</title>
-<script>
-// 런타임 에러 화면 표시
-window.onerror = function(msg, src, line, col, err) {
-  var d = document.getElementById('_errBox');
-  if(!d){ d=document.createElement('div'); d.id='_errBox';
-    d.style.cssText='position:fixed;top:0;left:0;right:0;background:red;color:#fff;font-size:12px;padding:8px;z-index:99999;white-space:pre-wrap;max-height:200px;overflow:auto';
-    document.body.appendChild(d);
-  }
-  d.textContent += (msg+' ('+src.split('/').pop()+':'+line+')\n');
-  return false;
-};
-</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
