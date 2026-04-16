@@ -624,7 +624,7 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
     <div id="p-settle" style="display:none">
       <!-- 공유 버튼 -->
       <div style="margin-bottom:12px">
-        <button class="btn-pri" onclick="shareTrip()" style="background:linear-gradient(135deg,#1D9E75,#2563a8);display:flex;align-items:center;justify-content:center;gap:8px">
+        <button id="shareTripBtn" class="btn-pri" onclick="shareTrip()" style="background:linear-gradient(135deg,#1D9E75,#2563a8);display:flex;align-items:center;justify-content:center;gap:8px">
           🔗 참석자에게 공유하기
         </button>
         <div id="shareResult" style="display:none;margin-top:10px;background:var(--bg2);border-radius:var(--rmd);padding:12px">
@@ -1921,7 +1921,7 @@ const JBIN_ACCESS = '$2a$10$3QGgPhLbKA0q/q.ZCZomLea1A1SrpThjPf2MJztF4GsnG.h4NaC6
 
 async function shareTrip(){
   if(!TRIP.name){alert('여행을 먼저 시작해 주세요.');return;}
-  const btn = document.querySelector('#p-settle .btn-pri');
+  const btn = document.getElementById('shareTripBtn');
   const status = document.getElementById('shareStatus');
   if(btn){ btn.textContent = '⏳ 공유 링크 생성 중...'; btn.disabled = true; }
 
