@@ -527,10 +527,10 @@ input{-webkit-appearance:none}select{-webkit-appearance:none}
         <div style="background:#FFF4E5;border-radius:var(--rmd);padding:10px 12px;font-size:12px;color:#7A4100;margin-bottom:12px;border:.5px solid #F5C97A">
           트레블월렛 카드 잔액 일부 또는 전부를 원화로 환전해 계좌로 이전합니다.<br>카드 잔액이 줄고, 환전 환율로 계산된 원화가 계좌에 반환됩니다.
         </div>
-        <div class="fr3">
-          <div class="fg"><label id="rfLocalLbl">이전 현지화 금액</label><input type="text" id="rfLocal" placeholder="0" inputmode="numeric" oninput="fmtInput(this)"/></div>
-          <div class="fg"><label>반환 원화(직접입력)</label><input type="text" id="rfKrw" placeholder="0" inputmode="numeric" oninput="fmtInput(this)"/></div>
-          <div class="fg"><label id="rfRateLbl">환율(선택)</label><input type="text" id="rfRate" placeholder="930.00" inputmode="decimal"/></div>
+          <div class="fr3">
+          <div class="fg"><label id="rfLocalLbl">이전 현지화 금액</label><input type="text" id="rfLocal" placeholder="0" inputmode="numeric" oninput="fmtInput(this);calcRefund('local')"/></div>
+          <div class="fg"><label>반환 원화(직접입력)</label><input type="text" id="rfKrw" placeholder="0" inputmode="numeric" oninput="fmtInput(this);calcRefund('krw')"/></div>
+          <div class="fg"><label id="rfRateLbl">환율(자동계산)</label><input type="text" id="rfRate" placeholder="자동" inputmode="decimal" oninput="calcRefund('rate')"/></div>
         </div>
         <div class="fr2">
           <div class="fg"><label>날짜</label><input type="date" id="rfDate"/></div>
@@ -1505,13 +1505,19 @@ function saveAtm(id){
 
 /* ── 카드→계좌 이전 ── */
 function calcRefund(ch){
-  const l=nv('rfLocal'),r=parseFloat(document.getElementById('rfRate').value)||0;
-  if(ch==='local'&&l>0&&r>0) sf('rfKrw',l2k(l,r));
-  else if(ch==='rate'&&r>0&&l>0) sf('rfKrw',l2k(l,r));
-  // 환불은 카드 잔액 초과 체크 불필요 (잔액을 늘려주는 방향)
-  const cardB=cardBal()-refundLocal(); // 환불 전 카드 잔액
-  sw('rfWarn', l>0&&l>(cardB+refundLocal())?`⚠ 환불 금액(${fL(l)})이 충전된 카드 잔액(${fL(cardChgd())})보다 큽니다. 금액을 확인해 주세요.`:'warn-r');
-  if(l===0||l<=(cardChgd())) sw('rfWarn',null);
+  const l=nv('rfLocal'), k=nv('rfKrw'), r=parseFloat(document.getElementById('rfRate').value)||0;
+  if(ch==='local'){
+    if(k>0&&l>0) document.getElementById('rfRate').value=(R100()?k/l*100:k/l).toFixed(2);
+    else if(r>0&&l>0) sf('rfKrw',l2k(l,r));
+  } else if(ch==='krw'){
+    if(l>0&&k>0) document.getElementById('rfRate').value=(R100()?k/l*100:k/l).toFixed(2);
+    else if(r>0&&l>0) sf('rfKrw',l2k(l,r));
+  } else if(ch==='rate'&&r>0){
+    if(l>0) sf('rfKrw',l2k(l,r));
+  }
+  const cardB=cardChgd();
+  sw('rfWarn', l>0&&l>cardB?`⚠ 환불 금액(${fL(l)})이 총 충전액(${fL(cardB)})보다 큽니다. 금액을 확인해 주세요.`:'warn-r');
+  if(l===0||l<=cardB) sw('rfWarn',null);
 }
 function addRefund(){
   const local=nv('rfLocal'),rate=parseFloat(document.getElementById('rfRate').value)||0,krw=nv('rfKrw'),date=document.getElementById('rfDate').value,note=document.getElementById('rfNote').value.trim();
