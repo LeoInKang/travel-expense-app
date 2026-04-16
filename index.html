@@ -1973,7 +1973,7 @@ async function shareTrip(){
       saveCurrentTrip(true);
     }
 
-    shareUrl = location.href.split('?')[0].replace('index.html','') + 'share.html?id=' + binId;
+    shareUrl = location.href.split('?')[0].replace('index.html','') + 'view.html?id=' + binId;
     document.getElementById('shareUrl').value = shareUrl;
     document.getElementById('shareResult').style.display = '';
     status.textContent = '✅ 링크가 생성됐어요. 참석자들에게 공유하세요!';
