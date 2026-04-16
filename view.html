@@ -168,6 +168,15 @@ function render(d){
   });
   const allDates = [...new Set([...Object.keys(expByDate), ...Object.keys(krwByDate)])].sort();
 
+  // 잔액 계산
+  const bal = d.balance || d.settle || {};
+  const avgRate = bal.avgRate || 0;
+  const acctBal = bal.acctBal || 0;
+  const cardBalAmt = bal.cardBal || 0;
+  const cashBalAmt = bal.cashBal || 0;
+  const cardBalKrw = avgRate > 0 ? Math.round(cardBalAmt * avgRate / (d.country?.r100 ? 100 : 1)) : 0;
+  const cashBalKrw = avgRate > 0 ? Math.round(cashBalAmt * avgRate / (d.country?.r100 ? 100 : 1)) : 0;
+
   document.getElementById('loading').style.display = 'none';
   document.getElementById('content').style.display = '';
   document.getElementById('content').innerHTML = `
@@ -182,35 +191,84 @@ function render(d){
       </div>
     </div>
 
+    <!-- 입금 내역 -->
+    <div class="card">
+      <div class="card-ttl">💰 입금 내역</div>
+      ${(d.deposits||[]).length === 0 ? '<div style="color:var(--tx3);font-size:13px">입금 내역 없음</div>' :
+        (d.deposits||[]).map(dep => `
+          <div class="exp-row">
+            <div class="exp-info">
+              <div class="exp-name">${dep.mem}</div>
+              <div class="exp-sub">${dep.date}${dep.note ? ' · ' + dep.note : ''}</div>
+            </div>
+            <div class="exp-amt" style="color:#1D9E75">${Math.round(dep.krwEquiv).toLocaleString('ko-KR')}원</div>
+          </div>
+        `).join('')
+      }
+      <div style="display:flex;justify-content:flex-end;padding-top:8px;margin-top:4px;border-top:.5px solid var(--bd3)">
+        <span style="font-size:12px;color:var(--tx2)">합계 </span>
+        <span style="font-size:13px;font-weight:700;margin-left:6px">${(d.deposits||[]).reduce((s,dep)=>s+dep.krwEquiv,0).toLocaleString('ko-KR')}원</span>
+      </div>
+    </div>
 
-    <!-- 날짜별 지출 내역 -->
+    <!-- 지출 내역 -->
     <div class="card">
       <div class="card-ttl">📋 지출 내역</div>
-      ${allDates.map(date => {
-        const fxList = expByDate[date] || [];
-        const krwList = krwByDate[date] || [];
-        return `
-          <div style="font-size:11px;font-weight:500;color:var(--tx3);padding:8px 0 4px;border-bottom:.5px solid var(--bd3);margin-top:4px">${date}</div>
-          ${fxList.map(e => `
-            <div class="exp-row">
-              <div class="exp-info">
-                <div class="exp-name">${e.name}</div>
-                <div class="exp-sub">${e.pay}${e.note ? ' · ' + e.note : ''}</div>
+      ${allDates.length === 0 ? '<div style="color:var(--tx3);font-size:13px">지출 내역 없음</div>' :
+        allDates.map(date => {
+          const fxList = expByDate[date] || [];
+          const krwList = krwByDate[date] || [];
+          return `
+            <div style="font-size:11px;font-weight:600;color:var(--tx3);padding:8px 0 4px;border-bottom:.5px solid var(--bd3);margin-top:4px">${date}</div>
+            ${fxList.map(e => `
+              <div class="exp-row">
+                <div class="exp-info">
+                  <div class="exp-name">${e.name}</div>
+                  <div class="exp-sub">${e.pay}${e.note ? ' · ' + e.note : ''}</div>
+                </div>
+                <div class="exp-amt">${sym}${Math.round(e.amt).toLocaleString('ko-KR')}</div>
               </div>
-              <div class="exp-amt">${sym}${Math.round(e.amt).toLocaleString('ko-KR')}</div>
-            </div>
-          `).join('')}
-          ${krwList.map(e => `
-            <div class="exp-row">
-              <div class="exp-info">
-                <div class="exp-name">${e.name}</div>
-                <div class="exp-sub">원화 · ${e.payer}${e.note ? ' · ' + e.note : ''}</div>
+            `).join('')}
+            ${krwList.map(e => `
+              <div class="exp-row">
+                <div class="exp-info">
+                  <div class="exp-name">${e.name}</div>
+                  <div class="exp-sub">원화 · ${e.payer}${e.note ? ' · ' + e.note : ''}</div>
+                </div>
+                <div class="exp-amt">${Math.round(e.amt).toLocaleString('ko-KR')}원</div>
               </div>
-              <div class="exp-amt">${Math.round(e.amt).toLocaleString('ko-KR')}원</div>
-            </div>
-          `).join('')}
-        `;
-      }).join('')}
+            `).join('')}
+          `;
+        }).join('')
+      }
+    </div>
+
+    <!-- 잔액 내역 -->
+    <div class="card">
+      <div class="card-ttl">🏦 잔액 내역</div>
+      ${acctBal > 0 ? `
+        <div class="exp-row">
+          <div class="exp-info"><div class="exp-name">계좌 잔액</div></div>
+          <div class="exp-amt" style="color:#1D9E75">${acctBal.toLocaleString('ko-KR')}원</div>
+        </div>` : ''}
+      ${cardBalAmt > 0 ? `
+        <div class="exp-row">
+          <div class="exp-info">
+            <div class="exp-name">카드 잔액</div>
+            ${avgRate > 0 ? `<div class="exp-sub">≈ ${cardBalKrw.toLocaleString('ko-KR')}원</div>` : ''}
+          </div>
+          <div class="exp-amt">${sym}${cardBalAmt.toLocaleString('ko-KR')}</div>
+        </div>` : ''}
+      ${cashBalAmt > 0 ? `
+        <div class="exp-row">
+          <div class="exp-info">
+            <div class="exp-name">현금 잔액</div>
+            ${avgRate > 0 ? `<div class="exp-sub">≈ ${cashBalKrw.toLocaleString('ko-KR')}원</div>` : ''}
+          </div>
+          <div class="exp-amt">${sym}${cashBalAmt.toLocaleString('ko-KR')}</div>
+        </div>` : ''}
+      ${acctBal === 0 && cardBalAmt === 0 && cashBalAmt === 0 ?
+        '<div style="color:var(--tx3);font-size:13px">잔액 없음</div>' : ''}
     </div>
 
     <div class="footer">

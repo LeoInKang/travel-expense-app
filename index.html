@@ -1926,6 +1926,7 @@ async function shareTrip(){
   if(btn){ btn.textContent = '⏳ 공유 링크 생성 중...'; btn.disabled = true; }
 
   // 공유할 데이터 구성 (읽기 전용)
+  const r = avgRate();
   const shareData = {
     tripName: TRIP.name,
     startDate: TRIP.startDate,
@@ -1936,6 +1937,20 @@ async function shareTrip(){
     createdAt: new Date().toISOString(),
     // 정산 결과
     settle: buildShareSettle(),
+    // 입금 내역
+    deposits: deposits.map(d=>({date:d.date,mem:d.mem,amt:d.amt,cur:d.cur,krwEquiv:d.krwEquiv,note:d.note||''})),
+    // 자금 흐름 (카드충전/환전/ATM/환급)
+    charges: charges.map(c=>({date:c.date,krw:c.krw,local:c.local,rate:c.rate,note:c.note||''})),
+    exchanges: exchanges.map(c=>({date:c.date,krw:c.krw,local:c.local,rate:c.rate,note:c.note||''})),
+    atms: atms.map(a=>({date:a.date,local:a.local,note:a.note||''})),
+    refunds: refunds.map(a=>({date:a.date,local:a.local,krw:a.krw,note:a.note||''})),
+    // 잔액
+    balance: {
+      acctBal: Math.round(acct()),
+      cardBal: Math.round(cardBal()),
+      cashBal: Math.round(cashBal()),
+      avgRate: Math.round(r),
+    },
     // 지출 내역
     expenses: expenses.map(e=>({date:e.date,name:e.name,amt:e.amt,pay:e.pay,note:e.note||''})),
     krwExps: krwExps.map(e=>({date:e.date,name:e.name,amt:e.amt,payer:e.payer,note:e.note||''})),
